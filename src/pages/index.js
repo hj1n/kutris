@@ -64,7 +64,7 @@ const useStage = (player, resetPlayer) => {
 
     const sweepRows = (newStage) => {
       return newStage.reduce((ack, row) => {
-        if (row.findIndex((cell) => cell[0] === 0) === -1) {
+        if (row.every((cell) => cell[0] !== 0)) {
           setRowsCleared((prev) => prev + 1);
           ack.unshift(new Array(newStage[0].length).fill([0, "clear"]));
           return ack;
@@ -170,7 +170,8 @@ export default function Home() {
     setGameOver(false);
   };
 
-  const move = ({ keyCode, repeat }) => {
+  const move = (e) => {
+    const { keyCode, repeat } = e;
     if (!gameOver) {
       if (keyCode === 37) {
         movePlayer(-1);
@@ -180,6 +181,9 @@ export default function Home() {
         setDroptime(30);
       } else if (keyCode === 38) {
         playerRotate(stage);
+      } else if (keyCode === 32) {
+        e.preventDefault();
+        hardDrop();
       }
     }
   };
@@ -202,9 +206,27 @@ export default function Home() {
     }
   };
 
+  const hardDrop = () => {
+    let dropPos = player.pos.y;
+    while (
+      !isColliding(player, stage, { x: 0, y: dropPos - player.pos.y + 1 })
+    ) {
+      dropPos += 1;
+    }
+    updatePlayerPos({ x: 0, y: dropPos - player.pos.y, collided: true });
+  };
+
+  const insertRandomRow = () => {
+    const newRow = new Array(STAGE_WIDTH).fill([1, "damage"]);
+    newRow[Math.floor(Math.random() * STAGE_WIDTH)] = [0, "clear"];
+    const newStage = stage.slice(1).concat([newRow]);
+    setStage(newStage);
+  };
+
   useInterval(() => {
     drop();
   }, dropTime);
+
   return (
     <main className="bg-white">
       <div
@@ -230,6 +252,13 @@ export default function Home() {
                 <div>스코어 {score}</div>
                 <div>줄 {rows}</div>
                 <div>레벨 {level}</div>
+                <div
+                  onClick={() => {
+                    insertRandomRow();
+                  }}
+                >
+                  피해부여 테스트
+                </div>
               </div>
             )}
           </div>
