@@ -174,16 +174,36 @@ export default function Home() {
     const { keyCode, repeat } = e;
     if (!gameOver) {
       if (keyCode === 37) {
+        // left
         movePlayer(-1);
       } else if (keyCode === 39) {
+        // right
         movePlayer(1);
       } else if (keyCode === 40 && !repeat) {
+        // down
         setDroptime(30);
       } else if (keyCode === 38) {
+        // up
         playerRotate(stage);
       } else if (keyCode === 32) {
         e.preventDefault();
         hardDrop();
+      }
+    }
+  };
+
+  const moveControl = (dir) => {
+    if (!gameOver) {
+      if (dir === "left") {
+        movePlayer(-1);
+      } else if (dir === "right") {
+        movePlayer(1);
+      } else if (dir === "rotate") {
+        playerRotate(stage);
+      } else if (dir === "drop") {
+        hardDrop();
+      } else {
+        console.log("Invalid move");
       }
     }
   };
@@ -235,17 +255,19 @@ export default function Home() {
         onKeyUp={(e) => keyUp(e)}
         ref={gameArea}
         id="tetrisWrapper"
-        className="w-full h-screen overflow-hidden outline-none"
+        className="w-full h-screen overflow-hidden outline-none flex items-center justify-center"
       >
         <div
           id="tetrisContainer"
-          className="flex flex-col items-center p-40 mx-auto"
+          className="flex flex-col items-center w-full h-full"
         >
-          <div className="display">
+          <div className="display mb-4">
             {gameOver ? (
               <div className="flex gap-5">
                 <div>게임오버</div>
-                <div onClick={handleStartGame}>게임시작</div>
+                <div onClick={handleStartGame} className="cursor-pointer">
+                  게임시작
+                </div>
               </div>
             ) : (
               <div className="flex gap-5">
@@ -256,13 +278,14 @@ export default function Home() {
                   onClick={() => {
                     insertRandomRow();
                   }}
+                  className="cursor-pointer"
                 >
                   피해부여 테스트
                 </div>
               </div>
             )}
           </div>
-          <div>
+          <div className="flex-grow flex items-center justify-center">
             <div
               className="grid"
               style={{
@@ -274,9 +297,87 @@ export default function Home() {
               }}
             >
               {stage.map((row, y) =>
-                row.map((cell, x) => <Cell key={x} type={cell[0]} />)
+                row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
               )}
             </div>
+          </div>
+          <div className="w-full h-20 flex justify-between">
+            <button
+              onClick={() => moveControl("left")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("rotate")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4.5 12.5a8.5 8.5 0 0112.5 0M7.5 14.5a4.5 4.5 0 016 0"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("drop")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("right")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
