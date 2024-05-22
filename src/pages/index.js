@@ -255,7 +255,7 @@ export default function Home() {
         onKeyUp={(e) => keyUp(e)}
         ref={gameArea}
         id="tetrisWrapper"
-        className="w-full h-screen overflow-hidden outline-none flex items-center justify-center"
+        className="w-full h-[calc(100dvh)] overflow-hidden outline-none flex items-center justify-center"
       >
         <div
           id="tetrisContainer"
