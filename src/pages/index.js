@@ -248,7 +248,7 @@ export default function Home() {
   }, dropTime);
 
   return (
-    <main className="bg-white h-dvh">
+    <main className="bg-white h-svh">
       <div
         tabIndex="0"
         onKeyDown={(e) => move(e)}
