@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createStage, isColliding, randomTetromino } from "@/utils/gameHelper";
 import { ROWPOINTS, STAGE_WIDTH } from "@/utils/gameSetup";
 import Cell from "@/components/Cell";
-
+import { socket } from "@/socket";
 const usePlayer = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
@@ -145,7 +145,30 @@ export default function Home() {
 
   const [dropTime, setDroptime] = useState(null);
   const [gameOver, setGameOver] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const gameArea = useRef(null);
+
+  useEffect(() => {
+    if (socket.connected) {
+      onConnect();
+    }
+
+    function onConnect() {
+      setIsConnected(true);
+    }
+
+    function onDisconnect() {
+      setIsConnected(false);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+    };
+  }, []);
 
   const movePlayer = (dir) => {
     if (!isColliding(player, stage, { x: dir, y: 0 })) {
@@ -160,6 +183,7 @@ export default function Home() {
   };
 
   const handleStartGame = () => {
+    socket.emit("gameStart");
     if (gameArea.current) gameArea.current.focus();
     setStage(createStage());
     setDroptime(1000);
@@ -248,137 +272,132 @@ export default function Home() {
   }, dropTime);
 
   return (
-    <main className="bg-white h-svh">
+    <main className="bg-white h-[100svh] w-full fixed">
       <div
         tabIndex="0"
         onKeyDown={(e) => move(e)}
         onKeyUp={(e) => keyUp(e)}
         ref={gameArea}
         id="tetrisWrapper"
-        className="w-full h-full overflow-hidden outline-none flex items-center justify-center"
+        className="overflow-hidden outline-none flex items-center justify-center flex-col"
       >
-        <div
-          id="tetrisContainer"
-          className="flex flex-col items-center w-full h-full"
-        >
-          <div className="display mb-4">
-            {gameOver ? (
-              <div className="flex gap-5">
-                <div>게임오버</div>
-                <div onClick={handleStartGame} className="cursor-pointer">
-                  게임시작
-                </div>
+        <div className="display h-1/6 justify-center items-center ">
+          {gameOver ? (
+            <div className="flex gap-5">
+              <div>게임오버</div>
+              <div onClick={handleStartGame} className="cursor-pointer">
+                게임시작
               </div>
-            ) : (
-              <div className="flex gap-5">
-                <div>스코어 {score}</div>
-                <div>줄 {rows}</div>
-                <div>레벨 {level}</div>
-                <div
-                  onClick={() => {
-                    insertRandomRow();
-                  }}
-                  className="cursor-pointer"
-                >
-                  피해부여 테스트
-                </div>
+            </div>
+          ) : (
+            <div className="flex gap-5">
+              <div>스코어 {score}</div>
+              <div>줄 {rows}</div>
+              <div>레벨 {level}</div>
+              <div
+                onClick={() => {
+                  insertRandomRow();
+                }}
+                className="cursor-pointer"
+              >
+                피해부여 테스트
               </div>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-center h-4/6">
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns: `repeat(12, 25px)`,
+              gridTemplateRows: `repeat(20, 25px)`,
+              gridGap: "1px",
+              border: "1px solid #777",
+              background: "#222",
+            }}
+          >
+            {stage.map((row, y) =>
+              row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
             )}
           </div>
-          <div className="flex-grow flex items-center justify-center">
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: `repeat(12, 30px)`,
-                gridTemplateRows: `repeat(20, 30px)`,
-                gridGap: "1px",
-                border: "1px solid #777",
-                background: "#222",
-              }}
+        </div>
+        <div className="w-full flex justify-between h-20">
+          <button
+            onClick={() => moveControl("left")}
+            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              className="w-6 h-6"
             >
-              {stage.map((row, y) =>
-                row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
-              )}
-            </div>
-          </div>
-          <div className="w-full h-20 flex justify-between">
-            <button
-              onClick={() => moveControl("left")}
-              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => moveControl("rotate")}
+            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              className="w-6 h-6"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => moveControl("rotate")}
-              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4.5 12.5a8.5 8.5 0 0112.5 0M7.5 14.5a4.5 4.5 0 016 0"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => moveControl("drop")}
+            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              className="w-6 h-6"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4.5 12.5a8.5 8.5 0 0112.5 0M7.5 14.5a4.5 4.5 0 016 0"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => moveControl("drop")}
-              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => moveControl("right")}
+            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              className="w-6 h-6"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => moveControl("right")}
-              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     </main>
