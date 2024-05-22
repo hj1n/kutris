@@ -248,14 +248,14 @@ export default function Home() {
   }, dropTime);
 
   return (
-    <main className="bg-white">
+    <main className="bg-white h-dvh">
       <div
         tabIndex="0"
         onKeyDown={(e) => move(e)}
         onKeyUp={(e) => keyUp(e)}
         ref={gameArea}
         id="tetrisWrapper"
-        className="w-full h-[calc(100dvh)] overflow-hidden outline-none flex items-center justify-center"
+        className="w-full h-full overflow-hidden outline-none flex items-center justify-center"
       >
         <div
           id="tetrisContainer"
