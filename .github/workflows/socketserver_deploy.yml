@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH RemoteCommands
-        uses: appleboy/ssh-action@v0.1.5
+        uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{secrets.SSH_HOST}}
           port: ${{secrets.SSH_PORT}}
