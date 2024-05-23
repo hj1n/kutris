@@ -19,7 +19,4 @@ jobs:
           script: |
             cd ~/kutris
             git pull origin main
-            npm install
-            cd socket
-            npm install
             pm2 reload index
