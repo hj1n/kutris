@@ -144,9 +144,15 @@ export default function Home() {
     useGameStatus(rowsCleared);
 
   const [dropTime, setDroptime] = useState(null);
-  const [gameOver, setGameOver] = useState(true);
+  const [gameStart, setGameStart] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const gameArea = useRef(null);
+  const [randomNickname, setRandomNickname] = useState(null);
+
+  useEffect(() => {
+    setRandomNickname(`Player${Math.floor(Math.random() * 100)}`);
+  }, []);
 
   useEffect(() => {
     if (socket.connected) {
@@ -191,6 +197,7 @@ export default function Home() {
     setScore(0);
     setLevel(1);
     setRows(0);
+    setGameStart(true);
     setGameOver(false);
   };
 
@@ -273,6 +280,33 @@ export default function Home() {
 
   return (
     <main className="bg-white h-[100svh] w-full fixed">
+      {(!gameStart || gameOver) && (
+        <div className="modal fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-5 rounded">
+            {gameOver ? (
+              <div className="flex flex-col items-center gap-5">
+                <div>게임오버</div>
+                <div
+                  onClick={handleStartGame}
+                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                >
+                  게임시작
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-5">
+                <div>내 닉네임 {randomNickname}</div>
+                <div
+                  onClick={handleStartGame}
+                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                >
+                  게임시작
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <div
         tabIndex="0"
         onKeyDown={(e) => move(e)}
@@ -282,28 +316,19 @@ export default function Home() {
         className="overflow-hidden outline-none flex items-center justify-center flex-col"
       >
         <div className="display h-1/6 justify-center items-center ">
-          {gameOver ? (
-            <div className="flex gap-5">
-              <div>게임오버</div>
-              <div onClick={handleStartGame} className="cursor-pointer">
-                게임시작
-              </div>
+          <div className="flex gap-5">
+            <div>스코어 {score}</div>
+            <div>줄 {rows}</div>
+            <div>레벨 {level}</div>
+            <div
+              onClick={() => {
+                insertRandomRow();
+              }}
+              className="cursor-pointer"
+            >
+              피해부여 테스트
             </div>
-          ) : (
-            <div className="flex gap-5">
-              <div>스코어 {score}</div>
-              <div>줄 {rows}</div>
-              <div>레벨 {level}</div>
-              <div
-                onClick={() => {
-                  insertRandomRow();
-                }}
-                className="cursor-pointer"
-              >
-                피해부여 테스트
-              </div>
-            </div>
-          )}
+          </div>
         </div>
         <div className="flex items-center justify-center h-4/6">
           <div
