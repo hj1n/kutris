@@ -13,7 +13,7 @@ server.listen(port, () => {
 socketIO.on("connection", (socket) => {
   // success라는 이벤트가 발생했을 때
   console.log("socket connected");
-  socket.emit("success", "socket connected");
+  socket.emit("success", "socket connected - succentEvent");
 
   socket.on("gameStart", () => {
     console.log("gameStart");
