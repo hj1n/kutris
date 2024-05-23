@@ -3,6 +3,7 @@ import { createStage, isColliding, randomTetromino } from "@/utils/gameHelper";
 import { ROWPOINTS, STAGE_WIDTH } from "@/utils/gameSetup";
 import Cell from "@/components/Cell";
 import { socket } from "@/socket";
+import { v4 as uuidv4 } from "uuid";
 const usePlayer = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
@@ -151,10 +152,31 @@ export default function Home() {
   const [randomNickname, setRandomNickname] = useState(null);
 
   useEffect(() => {
-    setRandomNickname(`Player${Math.floor(Math.random() * 100)}`);
+    // 페이지 로딩시 랜덤 닉네임 생성
+    setRandomNickname(`Player_${uuidv4().slice(0, 8)}`);
   }, []);
 
   useEffect(() => {
+    // 닉네임이 생성되면 서버에 전송
+    if (!socket.connected || !randomNickname) {
+      return;
+    }
+
+    socket.emit("setNickname", randomNickname);
+  }, [randomNickname]);
+
+  useEffect(() => {
+    // stage 업데이트시 서버에 전송
+
+    if (!socket.connected || !gameStart || !stage) {
+      return;
+    }
+
+    socket.emit("updateStage", { stage, rows, score, level });
+  }, [stage]);
+
+  useEffect(() => {
+    // 소켓 연결
     if (socket.connected) {
       onConnect();
     }
@@ -295,7 +317,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-5">
-                <div>내 닉네임 {randomNickname}</div>
+                <div>닉네임 : {randomNickname}</div>
                 <div
                   onClick={handleStartGame}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
@@ -316,18 +338,33 @@ export default function Home() {
         className="overflow-hidden outline-none flex items-center justify-center flex-col"
       >
         <div className="display h-1/6 justify-center items-center ">
+          {/* <div>
+            서버 :
+            
+          </div> */}
           <div className="flex gap-5">
             <div>스코어 {score}</div>
             <div>줄 {rows}</div>
             <div>레벨 {level}</div>
-            <div
+            {/* <div
               onClick={() => {
                 insertRandomRow();
               }}
               className="cursor-pointer"
             >
               피해부여 테스트
-            </div>
+            </div> */}
+            {isConnected ? (
+              <span className="ml-5 inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                <span className="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
+                Server ON
+              </span>
+            ) : (
+              <span className="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                <span className="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
+                Server OFF
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-center h-4/6">
