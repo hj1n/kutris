@@ -11,5 +11,7 @@ const getSocketHost = () => {
 };
 
 export const socket = isBrowser
-  ? io(getSocketHost(), { transports: ["websocket"] })
+  ? io(getSocketHost(), {
+      transports: ["websocket"],
+    })
   : {};

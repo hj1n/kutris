@@ -1,11 +1,15 @@
 const express = require("express");
 const app = express();
 const server = require("http").createServer(app);
-const socketIO = require("socket.io")(server);
+const socketIO = require("socket.io")(server, {
+  // pingInterval: 3000,
+  // pingTimeout: 5000,
+});
 
 const port = process.env.PORT || 3001;
 let userList = {};
-
+let gameList = [];
+// [{"type":"single", "playerList": ["user1"]}, {"type":"multi", "playerList": ["user1", "user2"]}]
 server.listen(port, () => {
   console.log("Socket IO server listening on port" + port);
 });
@@ -27,6 +31,9 @@ socketIO.on("connection", (socket) => {
     console.log("gameStart");
   });
 
+  socket.on("viewGame", () => {
+    console.log("viewGame");
+  });
   socket.on("updateStage", ({ stage, rows, score, level }) => {
     console.log("updateStage Event");
     console.log(`rows: ${rows}, score: ${score}, level: ${level}`);

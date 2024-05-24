@@ -150,6 +150,7 @@ export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const gameArea = useRef(null);
   const [randomNickname, setRandomNickname] = useState(null);
+  const [playType, setPlayType] = useState("single");
 
   useEffect(() => {
     // 페이지 로딩시 랜덤 닉네임 생성
@@ -318,11 +319,59 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-5">
                 <div>닉네임 : {randomNickname}</div>
+                <form className="max-w-sm mx-auto">
+                  <label
+                    htmlFor="selectType"
+                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    타입 선택
+                  </label>
+                  <select
+                    id="selectType"
+                    onChange={(e) => {
+                      if (!isConnected && e.target.value !== "single") {
+                        alert(
+                          "서버가 연결되지 않았습니다. 싱글플레이로 진행해주세요"
+                        );
+                        return;
+                      } else {
+                        if (playType != "view" && e.target.value == "view") {
+                          socket.emit("viewGame");
+                        } else if (
+                          playType == "view" &&
+                          e.target.value != "view"
+                        ) {
+                          socket.emit("viewGameEnd");
+                        }
+                        setPlayType(e.target.value);
+                      }
+                    }}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  >
+                    <option value="single">싱글플레이</option>
+                    <option value="multiRandom">멀티플레이 - 랜덤매칭</option>
+                    <option value="multiFriend">멀티플레이 - 친구초대</option>
+
+                    <option value="view">다른 플레이어 관전</option>
+                  </select>
+                </form>
                 <div
                   onClick={handleStartGame}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
-                  게임시작
+                  게임 시작
+                </div>{" "}
+                <div
+                  onClick={handleStartGame}
+                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                >
+                  매칭 시작
+                </div>
+                <div
+                  onClick={handleStartGame}
+                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                >
+                  관전 시작
                 </div>
               </div>
             )}
