@@ -4,6 +4,13 @@ import { ROWPOINTS, STAGE_WIDTH } from "@/utils/gameSetup";
 import Cell from "@/components/Cell";
 import { socket } from "@/socket";
 import { v4 as uuidv4 } from "uuid";
+import {
+  BrowserView,
+  MobileView,
+  isBrowser,
+  isDesktop,
+  isMobile,
+} from "react-device-detect";
 const usePlayer = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
@@ -60,7 +67,6 @@ const useStage = (player, resetPlayer) => {
 
   useEffect(() => {
     if (!player.pos) return;
-
     setRowsCleared(0);
 
     const sweepRows = (newStage) => {
@@ -148,6 +154,8 @@ export default function Home() {
   const [gameStart, setGameStart] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isMobileCheck, setIsMobileCheck] = useState(false);
+
   const gameArea = useRef(null);
   const [randomNickname, setRandomNickname] = useState(null);
   const [playType, setPlayType] = useState("single");
@@ -155,6 +163,13 @@ export default function Home() {
   useEffect(() => {
     // 페이지 로딩시 랜덤 닉네임 생성
     setRandomNickname(`Player_${uuidv4().slice(0, 8)}`);
+  }, []);
+
+  useEffect(() => {
+    // 모바일 기기 체크
+    if (isMobile) {
+      setIsMobileCheck(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -225,6 +240,9 @@ export default function Home() {
   };
 
   const move = (e) => {
+    // 관전모드는 키입력 무시
+    if (playType == "view") return;
+
     const { keyCode, repeat } = e;
     if (!gameOver) {
       if (keyCode === 37) {
@@ -342,6 +360,14 @@ export default function Home() {
                           e.target.value != "view"
                         ) {
                           socket.emit("viewGameEnd");
+                        } else if (
+                          e.target.value.includes("multi") &&
+                          isMobile
+                        ) {
+                          alert(
+                            "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
+                          );
+                          return;
                         }
                         setPlayType(e.target.value);
                       }
@@ -432,84 +458,86 @@ export default function Home() {
             )}
           </div>
         </div>
-        <div className="w-full flex justify-between h-20">
-          <button
-            onClick={() => moveControl("left")}
-            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="w-6 h-6"
+        {playType != "view" && (
+          <div className="w-full flex justify-between h-20">
+            <button
+              onClick={() => moveControl("left")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={() => moveControl("rotate")}
-            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="w-6 h-6"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("rotate")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4.5 12.5a8.5 8.5 0 0112.5 0M7.5 14.5a4.5 4.5 0 016 0"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={() => moveControl("drop")}
-            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="w-6 h-6"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4.5 12.5a8.5 8.5 0 0112.5 0M7.5 14.5a4.5 4.5 0 016 0"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("drop")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
-              />
-            </svg>
-          </button>
-          <button
-            onClick={() => moveControl("right")}
-            className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              className="w-6 h-6"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+                />
+              </svg>
+            </button>
+            <button
+              onClick={() => moveControl("right")}
+              className="p-2 bg-gray-800 text-white rounded w-16 flex items-center justify-center"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
