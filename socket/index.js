@@ -239,7 +239,7 @@ io.on("connection", (socket) => {
 
 function getPlayerBySocket(socket) {
   for (const [nickname, player] of playerList.entries()) {
-    if (player.socket === socket) {
+    if (player.socket.id === socket.id) {
       console.log("Player found", player);
       return player;
     }
