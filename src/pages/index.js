@@ -156,6 +156,7 @@ export default function Home() {
   const [gameOver, setGameOver] = useState(false);
   const [selectedPlayingGame, setSelectedPlayingGame] = useState(null);
   const [playingGameList, setPlayingGameList] = useState([]);
+  const [viewGameCode, setViewGameCode] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
 
@@ -214,11 +215,22 @@ export default function Home() {
       console.log("playingGameList", playingGameList);
       setPlayingGameList(playingGameList);
     }
+    function onSocketError({ message }) {
+      alert(message);
+      window.location.reload();
+    }
+    function onUpdateGameFromServer({ nickname, stage, rows, score, level }) {
+      setStage(stage);
+      setRows(rows);
+      setScore(score);
+      setLevel(level);
+    }
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("viewGameList", onViewGameList);
-
+    socket.on("error", onSocketError);
+    socket.on("updateGameFromServer", onUpdateGameFromServer);
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
@@ -448,7 +460,13 @@ export default function Home() {
                           ))}
                         </div>
                         <div
-                          // onClick={handleStartGame}
+                          onClick={() => {
+                            setViewGameCode(selectedPlayingGame);
+                            setGameStart(true);
+                            socket.emit("viewGameJoin", {
+                              gameId: selectedPlayingGame,
+                            });
+                          }}
                           className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                         >
                           관전 시작
@@ -517,7 +535,7 @@ export default function Home() {
           </div>
         </div>
 
-        {playType != "view" && (
+        {playType != "view" && isMobileCheck && (
           <div className="w-full flex justify-between h-20">
             <button
               onClick={() => moveControl("left")}

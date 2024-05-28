@@ -202,11 +202,13 @@ io.on("connection", (socket) => {
     socket.leave("viewGameWaiting");
   });
 
-  socket.on("viewGame", ({ gameId }) => {
+  socket.on("viewGameJoin", ({ gameId }) => {
     const game = gameList.get(gameId);
+
     if (game) {
+      console.log("게임조인성공");
       socket.join(gameId);
-      socket.emit("gameUpdate", { state: game.getState() });
+      // socket.emit("updateGameFromServer", { state: game.getState() });
     } else {
       socket.emit("error", { message: "Game not found" });
     }
