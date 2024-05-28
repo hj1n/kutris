@@ -206,6 +206,8 @@ export default function Home() {
     }
 
     function onDisconnect() {
+      alert("서버와 연결이 끊겼습니다, 페이지를 새로고침합니다.");
+      window.location.reload();
       setIsConnected(false);
     }
     function onViewGameList({ playingGameList }) {

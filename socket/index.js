@@ -85,8 +85,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("startSingleGame", () => {
+    console.log("startSingle");
     const player = getPlayerBySocket(socket);
     if (player) {
+      console.log("playey존재");
       // 우리 목록에 있는 플레이어인지 확인후 새게임 생성
       const game = new Game(player);
       // 플레이어가 1명이므로 바로 시작
@@ -238,9 +240,11 @@ io.on("connection", (socket) => {
 function getPlayerBySocket(socket) {
   for (const [nickname, player] of playerList.entries()) {
     if (player.socket === socket) {
+      console.log("Player found", player);
       return player;
     }
   }
+  console.log("Player not found");
   return null;
 }
 
