@@ -178,12 +178,12 @@ export default function Home() {
 
   useEffect(() => {
     // 닉네임이 생성되면 서버에 전송
-    if (!socket.connected || !nickname) {
+    if (!isConnected || !nickname) {
       return;
     }
 
     socket.emit("setNickname", { nickname });
-  }, [nickname]);
+  }, [nickname, isConnected]);
 
   useEffect(() => {
     // stage 업데이트시 서버에 전송
