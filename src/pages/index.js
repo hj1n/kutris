@@ -3,6 +3,7 @@ import { createStage, isColliding, randomTetromino } from "@/utils/gameHelper";
 import { ROWPOINTS, STAGE_WIDTH } from "@/utils/gameSetup";
 import Cell from "@/components/Cell";
 import { socket } from "@/socket";
+import GameCard from "@/components/GameCard";
 import { v4 as uuidv4 } from "uuid";
 import {
   BrowserView,
@@ -153,6 +154,7 @@ export default function Home() {
   const [dropTime, setDroptime] = useState(null);
   const [gameStart, setGameStart] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [selectedPlayingGame, setSelectedPlayingGame] = useState(null);
   const [playingGameList, setPlayingGameList] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
@@ -164,7 +166,7 @@ export default function Home() {
   useEffect(() => {
     // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
     setStage(createStage());
-    setNickname(`Player_${uuidv4().slice(0, 8)}`);
+    setNickname(`Player_${uuidv4().slice(0, 5)}`);
   }, []);
 
   useEffect(() => {
@@ -207,6 +209,7 @@ export default function Home() {
       setIsConnected(false);
     }
     function onViewGameList({ playingGameList }) {
+      console.log("playingGameList", playingGameList);
       setPlayingGameList(playingGameList);
     }
 
@@ -331,7 +334,7 @@ export default function Home() {
     <main className="bg-white h-[100svh] w-full fixed">
       {(!gameStart || gameOver) && (
         <div className="modal fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-5 rounded w">
+          <div className="bg-white p-5 rounded h-4/5 w-10/12 max-w-80">
             {gameOver ? (
               <div className="flex flex-col items-center gap-5">
                 <div>게임오버</div>
@@ -374,11 +377,13 @@ export default function Home() {
                         return;
                       } else {
                         if (playType != "view" && e.target.value == "view") {
+                          setSelectedPlayingGame([]);
                           socket.emit("viewGameWaitingJoin");
                         } else if (
                           playType == "view" &&
                           e.target.value != "view"
                         ) {
+                          setSelectedPlayingGame([]);
                           socket.emit("viewGameWaitingLeave");
                         } else if (
                           e.target.value.includes("multi") &&
@@ -413,15 +418,43 @@ export default function Home() {
                 >
                   매칭 시작
                 </div>
-                <div>
-                  <div>현재 진행중인 게임</div>
-                </div>
-                <div
-                  onClick={handleStartGame}
-                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
-                >
-                  관전 시작
-                </div>
+                {playType == "view" && (
+                  <div>
+                    <div>현재 진행중인 게임</div>
+                    {playingGameList.length == 0 ? (
+                      <div className="text-sm text-red-400">
+                        {" "}
+                        - 진행중인 게임이 없습니다.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-48 h-44 overflow-y-scroll flex flex-col gap-y-1">
+                          {playingGameList?.map((game) => (
+                            <div
+                              key={game.gameId}
+                              onClick={() =>
+                                setSelectedPlayingGame(game.gameId)
+                              }
+                            >
+                              <GameCard
+                                selectedPlayingGame={selectedPlayingGame}
+                                gameId={game.gameId}
+                                gameType={game.gameType}
+                                playerList={game.players}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div
+                          // onClick={handleStartGame}
+                          className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                        >
+                          관전 시작
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -481,6 +514,7 @@ export default function Home() {
             )}
           </div>
         </div>
+
         {playType != "view" && (
           <div className="w-full flex justify-between h-20">
             <button

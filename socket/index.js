@@ -100,6 +100,7 @@ io.on("connection", (socket) => {
         gameId: game.id,
         players: [{ nickname: player.nickname }],
       });
+      broadCastViewGameList();
     }
   });
   socket.on("updateGame", ({ stage, rows, score, level }) => {
@@ -182,17 +183,20 @@ io.on("connection", (socket) => {
     // 관전 가능한 게임 목록 실시간 전달하기 위한 room join
     socket.join("viewGameWaiting");
     // 현재 게임중인 목록 한번 전달 및 다른 함수에서 게임 추가시 실시간 전달
-    const playingGames = [];
-    gameList.forEach((game) => {
-      if (game.state === "playing") {
-        playingGames.push({
-          gameId: game.id,
-          players: game.players.map((player) => player.nickname),
-          gameType: game.gameType,
-        });
-      }
-    });
-    io.to("viewGameWaiting").emit("viewGameList", { playingGames });
+    // const playingGames = [];
+    // gameList.forEach((game) => {
+    //   if (game.state === "playing") {
+    //     playingGames.push({
+    //       gameId: game.id,
+    //       players: game.players.map((player) => player.nickname),
+    //       gameType: game.gameType,
+    //     });
+    //   }
+    // });
+    // io.to("viewGameWaiting").emit("viewGameList", {
+    //   playingGameList: getGames(),
+    // });
+    broadCastViewGameList();
   });
   socket.on("viewGameWaitingLeave", () => {
     // 관전 가능한 게임 목록 실시간 전달하기 위한 room leave
@@ -210,17 +214,24 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    //TODO
-    // 진행중인 게임이 있었다면, 상대방에게 연결이 끊어져서 승리 판정
+    console.log("disconnected", socket.id);
+    // 속한 게임에 기권 처리
     // 게임 종료 처리
     // 게임 삭제 처리
     // 플레이어 목록에서 삭제
 
-    playerList.forEach((player, nickname) => {
-      if (player.socket === socket) {
-        playerList.delete(nickname);
+    const player = getPlayerBySocket(socket);
+    if (player) {
+      if (player.currentGame) {
+        // 멀티게임이었을 경우 상대방에게 승리 메시지 전달
+        const game = player.currentGame;
+        game.end();
+        gameList.delete(game.id);
+        io.to(game.id).emit("gameEnd", { message: "Opponent disconnected" });
       }
-    });
+      playerList.delete(player.nickname);
+    }
+    broadCastViewGameList();
   });
 });
 
@@ -231,4 +242,23 @@ function getPlayerBySocket(socket) {
     }
   }
   return null;
+}
+
+function broadCastViewGameList() {
+  io.to("viewGameWaiting").emit("viewGameList", {
+    playingGameList: getGames(),
+  });
+}
+function getGames() {
+  const playingGames = [];
+  gameList.forEach((game) => {
+    if (game.state === "playing") {
+      playingGames.push({
+        gameId: game.id,
+        players: game.players.map((player) => player.nickname),
+        gameType: game.gameType,
+      });
+    }
+  });
+  return playingGames;
 }
