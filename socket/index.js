@@ -73,7 +73,6 @@ io.on("connection", (socket) => {
         success: true,
         message: "Nickname set successfully",
       });
-      console.log("playerList", playerList);
     } else {
       // 이미 사용중인 닉네임일 경우, 새 닉네임 설정하도록 함
       // 플레이어 목록에 추가하지 않음
@@ -96,8 +95,6 @@ io.on("connection", (socket) => {
       player.currentGame = game;
       game.start();
       socket.join(game.id);
-      console.log("gameList", gameList);
-      console.log(socket.rooms);
       socket.emit("gameStart", {
         gameId: game.id,
         players: [{ nickname: player.nickname }],
@@ -239,8 +236,9 @@ io.on("connection", (socket) => {
 
 function getPlayerBySocket(socket) {
   for (const [nickname, player] of playerList.entries()) {
+    console.log(socket.id, player.socket.id);
     if (player.socket.id === socket.id) {
-      console.log("Player found", player);
+      console.log("Player found");
       return player;
     }
   }
