@@ -346,11 +346,13 @@ export default function Home() {
                   </label>
                   <select
                     id="selectType"
+                    value={playType}
                     onChange={(e) => {
                       if (!isConnected && e.target.value !== "single") {
                         alert(
                           "서버가 연결되지 않았습니다. 싱글플레이로 진행해주세요"
                         );
+                        setPlayType("single");
                         return;
                       } else {
                         if (playType != "view" && e.target.value == "view") {
