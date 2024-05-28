@@ -153,16 +153,18 @@ export default function Home() {
   const [dropTime, setDroptime] = useState(null);
   const [gameStart, setGameStart] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [playingGameList, setPlayingGameList] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
 
   const gameArea = useRef(null);
-  const [randomNickname, setRandomNickname] = useState(null);
+  const [nickname, setNickname] = useState(null);
   const [playType, setPlayType] = useState("single");
 
   useEffect(() => {
-    // 페이지 로딩시 랜덤 닉네임 생성
-    setRandomNickname(`Player_${uuidv4().slice(0, 8)}`);
+    // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
+    setStage(createStage());
+    setNickname(`Player_${uuidv4().slice(0, 8)}`);
   }, []);
 
   useEffect(() => {
@@ -174,12 +176,12 @@ export default function Home() {
 
   useEffect(() => {
     // 닉네임이 생성되면 서버에 전송
-    if (!socket.connected || !randomNickname) {
+    if (!socket.connected || !nickname) {
       return;
     }
 
-    socket.emit("setNickname", randomNickname);
-  }, [randomNickname]);
+    socket.emit("setNickname", { nickname });
+  }, [nickname]);
 
   useEffect(() => {
     // stage 업데이트시 서버에 전송
@@ -188,7 +190,7 @@ export default function Home() {
       return;
     }
 
-    socket.emit("updateStage", { stage, rows, score, level });
+    socket.emit("updateGame", { stage, rows, score, level });
   }, [stage]);
 
   useEffect(() => {
@@ -204,9 +206,13 @@ export default function Home() {
     function onDisconnect() {
       setIsConnected(false);
     }
+    function onViewGameList({ playingGameList }) {
+      setPlayingGameList(playingGameList);
+    }
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    socket.on("viewGameList", onViewGameList);
 
     return () => {
       socket.off("connect", onConnect);
@@ -227,7 +233,9 @@ export default function Home() {
   };
 
   const handleStartGame = () => {
-    socket.emit("gameStart");
+    if (playType == "single") {
+      socket.emit("startSingleGame");
+    }
     if (gameArea.current) gameArea.current.focus();
     setStage(createStage());
     setDroptime(1000);
@@ -323,20 +331,30 @@ export default function Home() {
     <main className="bg-white h-[100svh] w-full fixed">
       {(!gameStart || gameOver) && (
         <div className="modal fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-5 rounded">
+          <div className="bg-white p-5 rounded w">
             {gameOver ? (
               <div className="flex flex-col items-center gap-5">
                 <div>게임오버</div>
+                <div>
+                  <div>게임 스코어 : {score}</div>
+                  <div>처리한 줄 갯수 : {rows}</div>
+                  <div>달성한 레벨 : {level}</div>
+                </div>
+
                 <div
-                  onClick={handleStartGame}
+                  onClick={() => {
+                    setGameStart(false);
+                    setGameOver(false);
+                    setStage(createStage());
+                  }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
-                  게임시작
+                  처음으로
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-5">
-                <div>닉네임 : {randomNickname}</div>
+                <div>닉네임 : {nickname}</div>
                 <form className="max-w-sm mx-auto">
                   <label
                     htmlFor="selectType"
@@ -356,12 +374,12 @@ export default function Home() {
                         return;
                       } else {
                         if (playType != "view" && e.target.value == "view") {
-                          socket.emit("viewGame");
+                          socket.emit("viewGameWaitingJoin");
                         } else if (
                           playType == "view" &&
                           e.target.value != "view"
                         ) {
-                          socket.emit("viewGameEnd");
+                          socket.emit("viewGameWaitingLeave");
                         } else if (
                           e.target.value.includes("multi") &&
                           isMobile
@@ -394,6 +412,9 @@ export default function Home() {
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
                   매칭 시작
+                </div>
+                <div>
+                  <div>현재 진행중인 게임</div>
                 </div>
                 <div
                   onClick={handleStartGame}

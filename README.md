@@ -22,6 +22,8 @@
   - vercel에서는 소켓서버를 지원 X (https://vercel.com/guides/do-vercel-serverless-functions-support-websocket-connections)
 - AWS Lightsail을 사용하여 소켓서버를 구현하였으며, vercel에서 도메인에 SSL을 적용하여 연결해주기 때문에 소켓서버를 연결할 때에도 SSL을 적용해야 합니다. (wss://~~)
   - Recent version of Browser prohibits active mixed content. (https://web.dev/articles/what-is-mixed-content?hl=ko#active_mixed_content)
+  - Lightsail 인스턴스가 재시작되어 IP가 변경되는 것을 방지하기 위해, static IP를 신청하여 적용하였습니다.
+  - 도메인이 없으면 SSL을 적용할 수 없기 때문에, 기존 보유중인 도메인의 서브도메인을 사용하였습니다. (kutrisserver.hjhj.kr - A record to Lightsail static IP)
 - AWS Lightsail 인스턴스에서 ubuntu OS를 사용하였으며, python3-certbox-nginx를 통해 무료 SSL을 적용하였고 도메인을 연결하였습니다.
 - 인스턴스 내에서 소켓서버를 3001번 포트로 pm2를 통해 실행하였으며, nginx를 통해 외부에서 접속할 수 있도록 설정하였습니다.
   - 소켓서버 코드 : socket/index.js
