@@ -159,6 +159,7 @@ export default function Home() {
   const [viewGameCode, setViewGameCode] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
+  const [friendNickname, setFriendNickname] = useState(null);
 
   const gameArea = useRef(null);
   const [nickname, setNickname] = useState(null);
@@ -226,16 +227,31 @@ export default function Home() {
       setLevel(level);
     }
 
+    function onGameOver({ message }) {
+      if (playType == "view") {
+        // 관전자 입장에서의 게임오버
+        alert("게임이 종료되어 관전을 종료합니다.");
+        setGameStart(false);
+        setGameOver(false);
+        setStage(createStage());
+        setSelectedPlayingGame(null);
+      }
+    }
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("viewGameList", onViewGameList);
     socket.on("error", onSocketError);
+    socket.on("gameOver", onGameOver);
     socket.on("updateGameFromServer", onUpdateGameFromServer);
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("viewGameList", onViewGameList);
+      socket.off("error", onSocketError);
+      socket.off("gameOver", onGameOver);
+      socket.off("updateGameFromServer", onUpdateGameFromServer);
     };
-  }, []);
+  }, [playType]);
 
   const movePlayer = (dir) => {
     if (!isColliding(player, stage, { x: dir, y: 0 })) {
@@ -316,6 +332,7 @@ export default function Home() {
     } else {
       if (player.pos.y < 1) {
         console.log("Game over!");
+        socket.emit("gameOver");
         setGameOver(true);
         setDroptime(null);
       }
@@ -353,9 +370,12 @@ export default function Home() {
               <div className="flex flex-col items-center gap-5">
                 <div>게임오버</div>
                 <div>
-                  <div>게임 스코어 : {score}</div>
-                  <div>처리한 줄 갯수 : {rows}</div>
-                  <div>달성한 레벨 : {level}</div>
+                  <div className="font-bold">내 게임 스코어</div>
+                  <div className="text-sm">
+                    <div>게임 스코어 : {score}</div>
+                    <div>처리한 줄 갯수 : {rows}</div>
+                    <div>달성한 레벨 : {level}</div>
+                  </div>
                 </div>
 
                 <div
@@ -406,7 +426,7 @@ export default function Home() {
                           alert(
                             "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
                           );
-                          return;
+                          // return;
                         }
                         setPlayType(e.target.value);
                       }
@@ -420,26 +440,74 @@ export default function Home() {
                     <option value="view">다른 플레이어 관전</option>
                   </select>
                 </form>
-                <div
-                  onClick={handleStartGame}
-                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
-                >
-                  게임 시작
-                </div>{" "}
-                <div
-                  onClick={handleStartGame}
-                  className="cursor-pointer bg-gray-800 text-white p-2 rounded"
-                >
-                  매칭 시작
+                <div className="flex flex-col gap-y-2">
+                  {" "}
+                  <div>친구와 1:1 매치</div>
+                  <div className="text-sm">
+                    친구에게 참여코드{" "}
+                    <span
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          nickname.replace("Player_", "")
+                        );
+                        alert(
+                          "클립보드에 복사되었습니다, 친구에게 전달해주세요."
+                        );
+                      }}
+                      className="font-bold text-blue-500"
+                    >
+                      {nickname?.replace("Player_", "")}{" "}
+                    </span>
+                    를 전달하거나, 친구한테 받은 코드를 입력해주세요.
+                  </div>
+                  <input
+                    type="text"
+                    id="helper-text"
+                    maxLength={5}
+                    minLength={5}
+                    aria-describedby="helper-text-explanation"
+                    value={friendNickname}
+                    onChange={(e) => {
+                      setFriendNickname(e.target.value.toLowerCase());
+                    }}
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-1/2 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="ABCDE"
+                  ></input>
                 </div>
+
+                {playType == "single" && (
+                  <div
+                    onClick={handleStartGame}
+                    className="cursor-pointer bg-gray-800 text-white p-2 rounded"
+                  >
+                    게임 시작
+                  </div>
+                )}
                 {playType == "view" && (
                   <div>
-                    <div>현재 진행중인 게임</div>
+                    <div className="font-bold">현재 진행중인 게임</div>
                     {playingGameList.length == 0 ? (
-                      <div className="text-sm text-red-400">
-                        {" "}
-                        - 진행중인 게임이 없습니다.
-                      </div>
+                      <li className="flex items-center text-sm text-red-500">
+                        <div role="status">
+                          <svg
+                            aria-hidden="true"
+                            className="w-4 h-4 me-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+                            viewBox="0 0 100 101"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                              fill="currentColor"
+                            />
+                            <path
+                              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                              fill="currentFill"
+                            />
+                          </svg>
+                        </div>
+                        진행중인 게임이 없습니다.
+                      </li>
                     ) : (
                       <>
                         <div className="w-48 h-44 overflow-y-scroll flex flex-col gap-y-1">

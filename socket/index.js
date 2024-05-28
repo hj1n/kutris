@@ -76,18 +76,15 @@ io.on("connection", (socket) => {
     } else {
       // 이미 사용중인 닉네임일 경우, 새 닉네임 설정하도록 함
       // 플레이어 목록에 추가하지 않음
-      socket.emit("nicknameSet", {
-        success: false,
-        message: "Nickname already taken",
+      socket.emit("error", {
+        message: "닉네임이 다른사용자와 중복되어 재접속합니다.",
       });
     }
   });
 
   socket.on("startSingleGame", () => {
-    console.log("startSingle");
     const player = getPlayerBySocket(socket);
     if (player) {
-      console.log("playey존재");
       // 우리 목록에 있는 플레이어인지 확인후 새게임 생성
       const game = new Game(player);
       // 플레이어가 1명이므로 바로 시작
@@ -101,6 +98,19 @@ io.on("connection", (socket) => {
       });
       broadCastViewGameList();
     }
+  });
+
+  socket.on("gameOver", () => {
+    const player = getPlayerBySocket(socket);
+    if (player) {
+      const game = player.currentGame;
+      if (game) {
+        game.end();
+        gameList.delete(game.id);
+        io.to(game.id).emit("gameOver", { message: "게임이 종료되었습니다." });
+      }
+    }
+    broadCastViewGameList();
   });
   socket.on("updateGame", ({ stage, rows, score, level }) => {
     const player = getPlayerBySocket(socket);
@@ -206,7 +216,6 @@ io.on("connection", (socket) => {
     const game = gameList.get(gameId);
 
     if (game) {
-      console.log("게임조인성공");
       socket.join(gameId);
       // socket.emit("updateGameFromServer", { state: game.getState() });
     } else {
@@ -238,13 +247,10 @@ io.on("connection", (socket) => {
 
 function getPlayerBySocket(socket) {
   for (const [nickname, player] of playerList.entries()) {
-    console.log(socket.id, player.socket.id);
     if (player.socket.id === socket.id) {
-      console.log("Player found");
       return player;
     }
   }
-  console.log("Player not found");
   return null;
 }
 

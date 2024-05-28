@@ -20,5 +20,6 @@ jobs:
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
             cd ~/kutris
+            git stash
             git pull origin main
             pm2 reload index
