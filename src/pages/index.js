@@ -159,11 +159,14 @@ export default function Home() {
   const [viewGameCode, setViewGameCode] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
-  const [friendNickname, setFriendNickname] = useState(null);
-
+  const [friendNickname, setFriendNickname] = useState("");
+  const [matchMsg, setMatchMsg] = useState(null);
+  const [isSendInvite, setIsSendInvite] = useState(false);
   const gameArea = useRef(null);
   const [nickname, setNickname] = useState(null);
   const [playType, setPlayType] = useState("single");
+  const [inComingInvite, setInComingInvite] = useState("");
+  const [startGameCountDown, setStartGameCountDown] = useState(3);
 
   useEffect(() => {
     // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
@@ -237,12 +240,53 @@ export default function Home() {
         setSelectedPlayingGame(null);
       }
     }
+    function onInviteError({ message }) {
+      alert(message);
+      setIsSendInvite(false);
+      setFriendNickname("");
+      setMatchMsg("받은 매치 요청이 없습니다. ");
+    }
+    function onInviteReceived({ friendNickname }) {
+      if (playType == "multiFriend") {
+        setInComingInvite(friendNickname);
+        setMatchMsg(null);
+
+        // const accept = confirm(
+        //   `${friendNickname}님으로부터 매치 요청이 왔습니다. 수락하시겠습니까?`
+        // );
+        // if (accept) {
+        //   socket.emit("inviteAccept", { friendNickname });
+        //   setGameStart(true);
+        // }
+      }
+    }
+    function onInviteSent({ message }) {
+      if (playType == "multiFriend") {
+        setMatchMsg(message);
+      }
+    }
+
+    function onConfirmInvite({ friendNickname }) {
+      setPlayType("multiGaming");
+      setMatchMsg("매치가 성사되어 3초뒤 게임이 시작됩니다.");
+      setTimeout(() => {
+        handleStartGame();
+
+        setMatchMsg(null);
+      }, 3000);
+    }
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("viewGameList", onViewGameList);
     socket.on("error", onSocketError);
     socket.on("gameOver", onGameOver);
     socket.on("updateGameFromServer", onUpdateGameFromServer);
+    // inviteError,inviteReceived,inviteSent
+    socket.on("inviteError", onInviteError);
+    socket.on("inviteReceived", onInviteReceived);
+    socket.on("inviteSent", onInviteSent);
+    socket.on("confirmInvite", onConfirmInvite);
+
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
@@ -250,6 +294,10 @@ export default function Home() {
       socket.off("error", onSocketError);
       socket.off("gameOver", onGameOver);
       socket.off("updateGameFromServer", onUpdateGameFromServer);
+      socket.off("inviteError", onInviteError);
+      socket.off("inviteReceived", onInviteReceived);
+      socket.off("inviteSent", onInviteSent);
+      socket.off("confirmInvite", onConfirmInvite);
     };
   }, [playType]);
 
@@ -392,87 +440,206 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-5">
                 <div>닉네임 : {nickname}</div>
-                <form className="max-w-sm mx-auto">
-                  <label
-                    htmlFor="selectType"
-                    className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    타입 선택
-                  </label>
-                  <select
-                    id="selectType"
-                    value={playType}
-                    onChange={(e) => {
-                      if (!isConnected && e.target.value !== "single") {
-                        alert(
-                          "서버가 연결되지 않았습니다. 싱글플레이로 진행해주세요"
-                        );
-                        setPlayType("single");
-                        return;
-                      } else {
-                        if (playType != "view" && e.target.value == "view") {
-                          setSelectedPlayingGame([]);
-                          socket.emit("viewGameWaitingJoin");
-                        } else if (
-                          playType == "view" &&
-                          e.target.value != "view"
-                        ) {
-                          setSelectedPlayingGame([]);
-                          socket.emit("viewGameWaitingLeave");
-                        } else if (
-                          e.target.value.includes("multi") &&
-                          isMobile
-                        ) {
+                {playType != "multiGaming" && (
+                  <form className="max-w-sm mx-auto">
+                    <label
+                      htmlFor="selectType"
+                      className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    >
+                      타입 선택
+                    </label>
+                    <select
+                      id="selectType"
+                      value={playType}
+                      onChange={(e) => {
+                        if (!isConnected && e.target.value !== "single") {
                           alert(
-                            "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
+                            "서버가 연결되지 않았습니다. 싱글플레이로 진행해주세요"
                           );
-                          // return;
+                          setPlayType("single");
+                          return;
+                        } else {
+                          if (playType != "view" && e.target.value == "view") {
+                            setSelectedPlayingGame([]);
+                            socket.emit("viewGameWaitingJoin");
+                          } else if (
+                            playType == "view" &&
+                            e.target.value != "view"
+                          ) {
+                            setSelectedPlayingGame([]);
+                            socket.emit("viewGameWaitingLeave");
+                          } else if (
+                            e.target.value.includes("multi") &&
+                            isMobile
+                          ) {
+                            alert(
+                              "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
+                            );
+                            // return;
+                          } else if (
+                            playType != "multiFriend" &&
+                            e.target.value == "multiFriend"
+                          ) {
+                            socket.emit("waitFriend");
+                            setMatchMsg("받은 매치 요청이 없습니다. ");
+                          } else if (
+                            playType == "multiFriend" &&
+                            e.target.value != "multiFriend"
+                          ) {
+                            socket.emit("waitFriendLeave");
+                            setMatchMsg(null);
+                          }
+                          setPlayType(e.target.value);
                         }
-                        setPlayType(e.target.value);
-                      }
-                    }}
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  >
-                    <option value="single">싱글플레이</option>
-                    <option value="multiRandom">멀티플레이 - 랜덤매칭</option>
-                    <option value="multiFriend">멀티플레이 - 친구초대</option>
+                      }}
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    >
+                      <option value="single">싱글플레이</option>
+                      <option value="multiRandom">멀티플레이 - 랜덤매칭</option>
+                      <option value="multiFriend">멀티플레이 - 친구초대</option>
 
-                    <option value="view">다른 플레이어 관전</option>
-                  </select>
-                </form>
+                      <option value="view">다른 플레이어 관전</option>
+                    </select>
+                  </form>
+                )}
                 <div className="flex flex-col gap-y-2">
                   {" "}
-                  <div>친구와 1:1 매치</div>
-                  <div className="text-sm">
-                    친구에게 참여코드{" "}
-                    <span
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          nickname.replace("Player_", "")
-                        );
-                        alert(
-                          "클립보드에 복사되었습니다, 친구에게 전달해주세요."
-                        );
-                      }}
-                      className="font-bold text-blue-500"
-                    >
-                      {nickname?.replace("Player_", "")}{" "}
-                    </span>
-                    를 전달하거나, 친구한테 받은 코드를 입력해주세요.
-                  </div>
-                  <input
-                    type="text"
-                    id="helper-text"
-                    maxLength={5}
-                    minLength={5}
-                    aria-describedby="helper-text-explanation"
-                    value={friendNickname}
-                    onChange={(e) => {
-                      setFriendNickname(e.target.value.toLowerCase());
-                    }}
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-1/2 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="ABCDE"
-                  ></input>
+                  {!inComingInvite && playType == "multiFriend" && (
+                    <>
+                      <div>친구와 1:1 매치</div>
+
+                      <div className="text-sm">
+                        친구에게 참여코드{" "}
+                        <span
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              nickname.replace("Player_", "")
+                            );
+                            alert(
+                              "클립보드에 복사되었습니다, 친구에게 전달해주세요."
+                            );
+                          }}
+                          className="font-bold text-blue-500"
+                        >
+                          {nickname?.replace("Player_", "")}{" "}
+                        </span>
+                        를 전달하거나, 친구한테 받은 코드를 입력해주세요.
+                      </div>
+                    </>
+                  )}
+                  {!isSendInvite &&
+                    !inComingInvite &&
+                    playType == "multiFriend" && (
+                      <div className="flex justify-between ">
+                        <input
+                          type="text"
+                          id="helper-text"
+                          maxLength={5}
+                          minLength={5}
+                          aria-describedby="helper-text-explanation"
+                          value={friendNickname.replace("Player_", "")}
+                          onChange={(e) => {
+                            setFriendNickname(`Player_${e.target.value}`);
+                          }}
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-1/2 p-2.5  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          placeholder="abcde"
+                        ></input>
+                        <button
+                          disabled={
+                            !friendNickname || friendNickname.length < 12
+                          }
+                          onClick={() => {
+                            // /^[a-z0-9]{5}$/
+                            if (
+                              !/^[a-z0-9]{5}$/.test(
+                                friendNickname.replace("Player_", "")
+                              )
+                            ) {
+                              alert(
+                                "닉네임은 5자리 영문자와 숫자로 입력해주세요."
+                              );
+                              setFriendNickname("");
+                              return;
+                            } else if (friendNickname == nickname) {
+                              alert("자신의 닉네임은 입력할 수 없습니다.");
+                              setFriendNickname("");
+                              return;
+                            }
+                            socket.emit("inviteFriend", {
+                              friendNickname,
+                            });
+                            setMatchMsg(
+                              "친구에게 매치 요청을 보냈으며, 수락시 게임이 시작됩니다."
+                            );
+                            setIsSendInvite(true);
+                          }}
+                          class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded
+         disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
+                        >
+                          매치 요청
+                        </button>
+                      </div>
+                    )}
+                  {inComingInvite && playType == "multiFriend" && (
+                    <>
+                      <div className="text-sm">새로운 매치 요청</div>
+
+                      <div className="flex justify-between ">
+                        <div className="font-bold">{inComingInvite}</div>
+                        <div>
+                          <button
+                            onClick={() => {
+                              socket.emit("acceptInvite", {
+                                friendNickname: inComingInvite,
+                              });
+                              // setGameStart(true);
+                              setInComingInvite(null);
+                            }}
+                            class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
+                          disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
+                          >
+                            수락
+                          </button>
+                          <button
+                            onClick={() => {
+                              socket.emit("rejectInvite", {
+                                friendNickname: inComingInvite,
+                              });
+                              setInComingInvite(null);
+                              setMatchMsg("받은 매치 요청이 없습니다. ");
+                            }}
+                            class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
+         disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
+                          >
+                            거절
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  {matchMsg && (
+                    <li className="flex items-center text-xs text-blue-500">
+                      <div role="status">
+                        <svg
+                          aria-hidden="true"
+                          className="w-4 h-4 me-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+                          viewBox="0 0 100 101"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                            fill="currentColor"
+                          />
+                          <path
+                            d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                            fill="currentFill"
+                          />
+                        </svg>
+                      </div>
+                      {matchMsg}
+                    </li>
+                  )}
                 </div>
 
                 {playType == "single" && (
