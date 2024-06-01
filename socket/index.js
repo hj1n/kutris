@@ -13,6 +13,15 @@ class Player {
     this.isPlaying = false;
     this.currentGame = null;
     this.currentGameType = null;
+    this.state = "waiting"; // "waiting", "waitingFriend"
+  }
+
+  waitingFriend() {
+    this.state = "waitingFriend";
+  }
+
+  waitingFriendLeave() {
+    this.state = "waiting";
   }
 }
 class Game {
@@ -162,11 +171,47 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("waitFriend", () => {
+    const player = getPlayerBySocket(socket);
+    if (player && !player.isPlaying) {
+      // 친구 초대 대기 상태로 변경
+      player.waitingFriend();
+    }
+  });
+
+  socket.on("waitFriendLeave", () => {
+    const player = getPlayerBySocket(socket);
+    if (player && !player.isPlaying) {
+      // 친구 초대 대기 상태로 변경
+      player.waitingFriendLeave();
+    }
+  });
+
   socket.on("inviteFriend", ({ friendNickname }) => {
+    const player = getPlayerBySocket(socket);
+    const friend = playerList.get(`${friendNickname}`);
+    // check friend is waiting
+    if (player && friend && friend.state == "waitingFriend") {
+      socket.emit("inviteSent", { message: "친구에게 매치요청을 보냈습니다." });
+      friend.socket.emit("inviteReceived", { friendNickname: player.nickname });
+    } else if (player && friend && friend.state != "waitingFriend") {
+      socket.emit("inviteError", {
+        message: "친구가 온라인이지만, 1:1매치 대기상태가 아닙니다.",
+      });
+    } else {
+      socket.emit("inviteError", {
+        message: "입력한 플레이어가 온라인이 아닙니다.",
+      });
+    }
+  });
+
+  socket.on("rejectInvite", ({ friendNickname }) => {
     const player = getPlayerBySocket(socket);
     const friend = playerList.get(friendNickname);
     if (player && friend && !friend.isPlaying) {
-      friend.socket.emit("inviteReceived", { friendNickname: player.nickname });
+      friend.socket.emit("inviteError", {
+        message: "친구가 매치를 거절했습니다.",
+      });
     }
   });
 
@@ -181,10 +226,11 @@ io.on("connection", (socket) => {
       game.start();
       player.socket.join(game.id);
       friend.socket.join(game.id);
-      io.to(game.id).emit("gameStart", {
+      io.to(game.id).emit("confirmInvite", {
         gameId: game.id,
         players: [{ nickname: player.nickname }, { nickname: friend.nickname }],
       });
+      // send gameStart After 3 seconds
     }
   });
 
