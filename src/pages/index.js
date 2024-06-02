@@ -303,9 +303,10 @@ export default function Home() {
     }
     function onReceiveAttack({ count }) {
       console.log("count", count);
-      for (let i = 0; i < count; i++) {
-        insertRandomRow();
-      }
+      insertRandomRow(count);
+
+      // for (let i = 0; i < count; i++) {
+      // }
     }
 
     function onGameEnd() {
@@ -444,10 +445,15 @@ export default function Home() {
     updatePlayerPos({ x: 0, y: dropPos - player.pos.y, collided: true });
   };
 
-  const insertRandomRow = () => {
-    const newRow = new Array(STAGE_WIDTH).fill([1, "damage"]);
-    newRow[Math.floor(Math.random() * STAGE_WIDTH)] = [0, "clear"];
-    const newStage = stage.slice(1).concat([newRow]);
+  const insertRandomRow = (count) => {
+    let newStage = stage.slice(count);
+
+    for (let i = 0; i < count; i++) {
+      const newRow = new Array(STAGE_WIDTH).fill([1, "damage"]);
+      newRow[Math.floor(Math.random() * STAGE_WIDTH)] = [0, "clear"];
+      newStage = newStage.concat([newRow]);
+    }
+
     setStage(newStage);
   };
 
