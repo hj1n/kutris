@@ -13,6 +13,9 @@ module.exports = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      colors: {
+        "custom-red": "#862633", // This is the approximate hex for Pantone 202 C
+      },
     },
   },
   plugins: [],

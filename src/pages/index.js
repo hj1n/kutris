@@ -225,8 +225,13 @@ export default function Home() {
       setIsConnected(false);
     }
     function onViewGameList({ playingGameList }) {
-      console.log("playingGameList", playingGameList);
-      setPlayingGameList(playingGameList);
+      if (isMobileCheck) {
+        setPlayingGameList(
+          playingGameList.filter((game) => game.gameType == "single")
+        );
+      } else {
+        setPlayingGameList(playingGameList);
+      }
     }
     function onSocketError({ message }) {
       alert(message);
@@ -248,17 +253,10 @@ export default function Home() {
           setOtherPlayerScore({ score, rows, level });
         }
       });
-
-      // Array.from(game).forEach(([nickname, { stage, rows, score, level }]) => {
-      //   if (nickname != nickname) {
-      //     setOtherPlayerStage(stage);
-      //     setOtherPlayerScore({ score, rows, level });
-      //   }
-      // });
     }
 
     function onGameOver({ message, loser }) {
-      if (playType == "view") {
+      if (playType?.includes("view")) {
         // 관전자 입장에서의 게임오버
         alert("게임이 종료되어 관전을 종료합니다.");
         setGameStart(false);
@@ -402,7 +400,7 @@ export default function Home() {
 
   const move = (e) => {
     // 관전모드는 키입력 무시
-    if (playType == "view") return;
+    if (playType?.includes("view")) return;
 
     const { keyCode, repeat } = e;
     if (!gameOver) {
@@ -550,13 +548,14 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-5">
                 <div>닉네임 : {nickname}</div>
+
                 {!isReadyToStart && (
                   <form className="max-w-sm mx-auto">
                     <label
                       htmlFor="selectType"
                       className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                     >
-                      타입 선택
+                      모드 선택
                     </label>
                     <select
                       id="selectType"
@@ -569,12 +568,15 @@ export default function Home() {
                           setPlayType("single");
                           return;
                         } else {
-                          if (playType != "view" && e.target.value == "view") {
+                          if (
+                            !playType?.includes("view") &&
+                            e.target.value.includes("view")
+                          ) {
                             setSelectedPlayingGame([]);
                             socket.emit("viewGameWaitingJoin");
                           } else if (
-                            playType == "view" &&
-                            e.target.value != "view"
+                            playType?.includes("view") &&
+                            !e.target.value.includes("view")
                           ) {
                             setSelectedPlayingGame([]);
                             socket.emit("viewGameWaitingLeave");
@@ -689,7 +691,7 @@ export default function Home() {
                             );
                             setIsSendInvite(true);
                           }}
-                          class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded
+                          className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded
          disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
                         >
                           매치 요청
@@ -711,7 +713,7 @@ export default function Home() {
                               // setGameStart(true);
                               setInComingInvite(null);
                             }}
-                            class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
+                            className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
                           disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
                           >
                             수락
@@ -724,7 +726,7 @@ export default function Home() {
                               setInComingInvite(null);
                               setMatchMsg("받은 매치 요청이 없습니다. ");
                             }}
-                            class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
+                            className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-1 px-2 border border-blue-500 hover:border-transparent rounded
          disabled:bg-gray-200 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed"
                           >
                             거절
@@ -766,9 +768,15 @@ export default function Home() {
                     게임 시작
                   </div>
                 )}
-                {playType == "view" && (
+                {playType?.includes("view") && (
                   <div>
                     <div className="font-bold">현재 진행중인 게임</div>
+
+                    {isMobileCheck && (
+                      <div className="text-xs text-gray-500">
+                        모바일 환경에서는 싱글플레이만 관전이 가능합니다.{" "}
+                      </div>
+                    )}
                     {playingGameList.length == 0 ? (
                       <li className="flex items-center text-sm text-red-500">
                         <div role="status">
@@ -789,7 +797,7 @@ export default function Home() {
                             />
                           </svg>
                         </div>
-                        진행중인 게임이 없습니다.
+                        현재 진행중인 게임이 없습니다.
                       </li>
                     ) : (
                       <>
@@ -878,6 +886,15 @@ export default function Home() {
           </div>
         </div> */}
         {/* { stage, score, rows, level, isConnected } */}
+        <span
+          className="text-xl font-bold text-custom-red cursor-pointer underline"
+          onClick={() => {
+            window.location.href = "/";
+          }}
+        >
+          KUTRIS
+        </span>
+
         <div className="flex">
           <GameBoard
             stage={stage}
@@ -897,7 +914,7 @@ export default function Home() {
           )}
         </div>
 
-        {playType != "view" && isMobileCheck && (
+        {!playType.includes("view") && isMobileCheck && (
           <div className="w-full flex justify-between h-20">
             <button
               onClick={() => moveControl("left")}
