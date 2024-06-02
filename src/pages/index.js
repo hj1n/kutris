@@ -307,11 +307,22 @@ export default function Home() {
         insertRandomRow();
       }
     }
+
+    function onGameEnd() {
+      alert("상대방이 게임을 나갔습니다.\n게임을 종료합니다.");
+      setGameStart(false);
+      setGameOver(false);
+      setStage(createStage());
+      setSelectedPlayingGame(null);
+    }
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("viewGameList", onViewGameList);
     socket.on("error", onSocketError);
     socket.on("gameOver", onGameOver);
+    socket.on("gameEnd", onGameEnd);
+
     socket.on("updateGameFromServer", onUpdateGameFromServer);
     // inviteError,inviteReceived,inviteSent
     socket.on("inviteError", onInviteError);
@@ -326,6 +337,7 @@ export default function Home() {
       socket.off("viewGameList", onViewGameList);
       socket.off("error", onSocketError);
       socket.off("gameOver", onGameOver);
+      socket.off("gameEnd", onGameEnd);
       socket.off("updateGameFromServer", onUpdateGameFromServer);
       socket.off("inviteError", onInviteError);
       socket.off("inviteReceived", onInviteReceived);
@@ -333,7 +345,7 @@ export default function Home() {
       socket.off("confirmInvite", onConfirmInvite);
       socket.off("receiveAttack", onReceiveAttack);
     };
-  }, [playType]);
+  }, [playType, stage, score, rows, level]);
 
   const movePlayer = (dir) => {
     if (!isColliding(player, stage, { x: dir, y: 0 })) {
@@ -465,6 +477,7 @@ export default function Home() {
                     setGameStart(false);
                     setGameOver(false);
                     setStage(createStage());
+                    setPlayType("single");
                   }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
@@ -797,13 +810,6 @@ export default function Home() {
         </div> */}
         {/* { stage, score, rows, level, isConnected } */}
         <div className="flex">
-          <span
-            onClick={() => {
-              insertRandomRow();
-            }}
-          >
-            하이
-          </span>
           <GameBoard
             stage={stage}
             score={score}
