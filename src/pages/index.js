@@ -268,7 +268,6 @@ export default function Home() {
         // 플레이어 입장
         setGameOver(true);
         setDroptime(null);
-        setFriendNickname("");
       }
     }
     function onInviteError({ message }) {
@@ -482,7 +481,7 @@ export default function Home() {
                     <div>처리한 줄 갯수 : {rows}</div>
                     <div>달성한 레벨 : {level}</div>
                   </div>
-                  {playType == "multiGaming" && (
+                  {friendNickname != "" && (
                     <>
                       <div className="font-bold">상대방 게임 스코어</div>
                       <div className="text-sm">
@@ -500,6 +499,7 @@ export default function Home() {
                     setGameOver(false);
                     setStage(createStage());
                     setPlayType("single");
+                    setFriendNickname("");
                   }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
