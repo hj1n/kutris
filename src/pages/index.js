@@ -264,6 +264,11 @@ export default function Home() {
         setGameOver(false);
         setStage(createStage());
         setSelectedPlayingGame(null);
+      } else {
+        // 플레이어 입장
+        setGameOver(true);
+        setDroptime(null);
+        setFriendNickname("");
       }
     }
     function onInviteError({ message }) {
@@ -430,6 +435,7 @@ export default function Home() {
         socket.emit("gameOver");
         setGameOver(true);
         setDroptime(null);
+        setFriendNickname("");
       }
       updatePlayerPos({ x: 0, y: 0, collided: true });
     }
@@ -476,6 +482,16 @@ export default function Home() {
                     <div>처리한 줄 갯수 : {rows}</div>
                     <div>달성한 레벨 : {level}</div>
                   </div>
+                  {playType == "multiGaming" && (
+                    <>
+                      <div className="font-bold">상대방 게임 스코어</div>
+                      <div className="text-sm">
+                        <div>게임 스코어 : {otherPlayerScore.score}</div>
+                        <div>처리한 줄 갯수 : {otherPlayerScore.rows}</div>
+                        <div>달성한 레벨 : {otherPlayerScore.level}</div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div
