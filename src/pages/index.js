@@ -12,6 +12,7 @@ import {
   isDesktop,
   isMobile,
 } from "react-device-detect";
+import GameBoard from "@/components/GameBoard";
 const usePlayer = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
@@ -121,6 +122,7 @@ const useGameStatus = (rowsCleared) => {
     if (rowsCleared > 0) {
       setScore((prev) => prev + ROWPOINTS[rowsCleared - 1] * level);
       setRows((prev) => prev + rowsCleared);
+      socket.emit("sendAttack", { count: rowsCleared });
     }
   }, [rowsCleared]);
 
@@ -148,6 +150,12 @@ const useInterval = (callback, delay) => {
 export default function Home() {
   const { player, updatePlayerPos, resetPlayer, playerRotate } = usePlayer();
   const { stage, setStage, rowsCleared } = useStage(player, resetPlayer);
+  const [otherPlayerStage, setOtherPlayerStage] = useState(createStage());
+  const [otherPlayerScore, setOtherPlayerScore] = useState({
+    score: 0,
+    rows: 0,
+    level: 1,
+  });
   const { score, setScore, rows, setRows, level, setLevel } =
     useGameStatus(rowsCleared);
 
@@ -223,11 +231,29 @@ export default function Home() {
       alert(message);
       window.location.reload();
     }
-    function onUpdateGameFromServer({ nickname, stage, rows, score, level }) {
-      setStage(stage);
-      setRows(rows);
-      setScore(score);
-      setLevel(level);
+    function onUpdateGameFromServer({ game }) {
+      // setStage(stage);
+      // setRows(rows);
+      // setScore(score);
+      // setLevel(level);
+      // playerStage is map with player nickname and stage
+      // playerScore is map with player nickname and score
+      // state is game state
+      // players is array of player nickname
+      // console.log("state", state);
+      game.playerStage.forEach(([player, { stage, rows, score, level }]) => {
+        if (player != nickname) {
+          setOtherPlayerStage(stage);
+          setOtherPlayerScore({ score, rows, level });
+        }
+      });
+
+      // Array.from(game).forEach(([nickname, { stage, rows, score, level }]) => {
+      //   if (nickname != nickname) {
+      //     setOtherPlayerStage(stage);
+      //     setOtherPlayerScore({ score, rows, level });
+      //   }
+      // });
     }
 
     function onGameOver({ message }) {
@@ -275,6 +301,12 @@ export default function Home() {
         setMatchMsg(null);
       }, 3000);
     }
+    function onReceiveAttack({ count }) {
+      console.log("count", count);
+      for (let i = 0; i < count; i++) {
+        insertRandomRow();
+      }
+    }
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("viewGameList", onViewGameList);
@@ -286,6 +318,7 @@ export default function Home() {
     socket.on("inviteReceived", onInviteReceived);
     socket.on("inviteSent", onInviteSent);
     socket.on("confirmInvite", onConfirmInvite);
+    socket.on("receiveAttack", onReceiveAttack);
 
     return () => {
       socket.off("connect", onConnect);
@@ -298,6 +331,7 @@ export default function Home() {
       socket.off("inviteReceived", onInviteReceived);
       socket.off("inviteSent", onInviteSent);
       socket.off("confirmInvite", onConfirmInvite);
+      socket.off("receiveAttack", onReceiveAttack);
     };
   }, [playType]);
 
@@ -617,7 +651,7 @@ export default function Home() {
                       </div>
                     </>
                   )}
-                  {matchMsg && (
+                  {playType.includes("multi") && matchMsg && (
                     <li className="flex items-center text-xs text-blue-500">
                       <div role="status">
                         <svg
@@ -723,51 +757,69 @@ export default function Home() {
         id="tetrisWrapper"
         className="overflow-hidden outline-none flex items-center justify-center flex-col"
       >
-        <div className="display h-1/6 justify-center items-center ">
-          {/* <div>
-            서버 :
-            
-          </div> */}
-          <div className="flex gap-5">
-            <div>스코어 {score}</div>
-            <div>줄 {rows}</div>
-            <div>레벨 {level}</div>
-            {/* <div
-              onClick={() => {
-                insertRandomRow();
-              }}
-              className="cursor-pointer"
-            >
-              피해부여 테스트
-            </div> */}
-            {isConnected ? (
-              <span className="ml-5 inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                <span className="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
-                Server ON
-              </span>
-            ) : (
-              <span className="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
-                <span className="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
-                Server OFF
-              </span>
-            )}
+        {/* <div>
+          <div className="display h-1/6 justify-center items-center ">
+            <div className="flex gap-5">
+              <div>스코어 {score}</div>
+              <div>줄 {rows}</div>
+              <div>레벨 {level}</div>
+
+              {isConnected ? (
+                <span className="ml-5 inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
+                  <span className="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
+                  Server ON
+                </span>
+              ) : (
+                <span className="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                  <span className="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
+                  Server OFF
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center justify-center h-4/6">
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: `repeat(12, 25px)`,
-              gridTemplateRows: `repeat(20, 25px)`,
-              gridGap: "1px",
-              border: "1px solid #777",
-              background: "#222",
+
+          <div className="flex items-center justify-center h-4/6">
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: `repeat(12, 25px)`,
+                gridTemplateRows: `repeat(20, 25px)`,
+                gridGap: "1px",
+                border: "1px solid #777",
+                background: "#222",
+              }}
+            >
+              {stage.map((row, y) =>
+                row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
+              )}
+            </div>
+          </div>
+        </div> */}
+        {/* { stage, score, rows, level, isConnected } */}
+        <div className="flex">
+          <span
+            onClick={() => {
+              insertRandomRow();
             }}
           >
-            {stage.map((row, y) =>
-              row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
-            )}
-          </div>
+            하이
+          </span>
+          <GameBoard
+            stage={stage}
+            score={score}
+            rows={rows}
+            level={level}
+            isConnected={isConnected}
+          />
+          {!isMobileCheck && playType.includes("multi") && (
+            <GameBoard
+              stage={otherPlayerStage}
+              score={otherPlayerScore.score}
+              rows={otherPlayerScore.rows}
+              level={otherPlayerScore.level}
+              isConnected={isConnected}
+            />
+          )}
         </div>
 
         {playType != "view" && isMobileCheck && (

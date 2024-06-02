@@ -36,6 +36,7 @@ class Game {
     this.id = `${this.gameType}_${Math.random().toString(36).substring(2, 15)}`;
     this.state = "waiting"; // "waiting", "playing", "finished"
     this.playerStage = new Map();
+    this.playerScore = new Map();
   }
 
   start() {
@@ -60,6 +61,7 @@ class Game {
     return {
       state: this.state,
       players: this.players.map((player) => player.nickname),
+      playerStage: Array.from(this.playerStage),
     };
   }
 }
@@ -134,18 +136,37 @@ io.on("connection", (socket) => {
           score,
           level,
         });
+        console.log(game.getState());
+        // console
         // 자기가 속한 게임 socket room에 업데이트된 게임 상태 전달
-        socket.to(game.id).emit("updateGameFromServer", {
-          nickname: player.nickname,
-          stage,
-          rows,
-          score,
-          level,
+        // socket.to(game.id).emit("updateGameFromServer", {
+        //   nickname: player.nickname,
+        //   stage,
+        //   rows,
+        //   score,
+        //   level,
+        // });
+        io.to(game.id).emit("updateGameFromServer", {
+          game: game.getState(),
         });
       }
     }
   });
 
+  socket.on("sendAttack", ({ count }) => {
+    const sendPlayer = getPlayerBySocket(socket);
+    if (sendPlayer) {
+      const game = sendPlayer.currentGame;
+      if (game) {
+        const opponent = game.players.find(
+          (player) => player.nickname !== sendPlayer.nickname
+        );
+        if (opponent) {
+          opponent.socket.emit("receiveAttack", { count });
+        }
+      }
+    }
+  });
   socket.on("joinRandomMatch", () => {
     const player = getPlayerBySocket(socket);
     if (player && !player.isPlaying) {
