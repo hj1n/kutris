@@ -166,6 +166,7 @@ export default function Home() {
   const [playingGameList, setPlayingGameList] = useState([]);
   const [viewGameCode, setViewGameCode] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isReadyToStart, setReadyToStart] = useState(false);
   const [isMobileCheck, setIsMobileCheck] = useState(false);
   const [friendNickname, setFriendNickname] = useState("");
   const [matchMsg, setMatchMsg] = useState(null);
@@ -174,7 +175,7 @@ export default function Home() {
   const [nickname, setNickname] = useState(null);
   const [playType, setPlayType] = useState("single");
   const [inComingInvite, setInComingInvite] = useState("");
-  const [startGameCountDown, setStartGameCountDown] = useState(3);
+  const [isWin, setIsWin] = useState(false);
 
   useEffect(() => {
     // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
@@ -256,7 +257,7 @@ export default function Home() {
       // });
     }
 
-    function onGameOver({ message }) {
+    function onGameOver({ message, loser }) {
       if (playType == "view") {
         // 관전자 입장에서의 게임오버
         alert("게임이 종료되어 관전을 종료합니다.");
@@ -266,8 +267,17 @@ export default function Home() {
         setSelectedPlayingGame(null);
       } else {
         // 플레이어 입장
+        if (loser != nickname) {
+          setIsWin(true);
+        }
         setGameOver(true);
         setDroptime(null);
+        setScore(0);
+        setRows(0);
+        setLevel(1);
+        setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
+        setOtherPlayerStage(createStage());
+        setSelectedPlayingGame(null);
       }
     }
     function onInviteError({ message }) {
@@ -297,7 +307,7 @@ export default function Home() {
     }
 
     function onConfirmInvite({ friendNickname }) {
-      setPlayType("multiGaming");
+      setReadyToStart(true);
       setMatchMsg("매치가 성사되어 3초뒤 게임이 시작됩니다.");
       setTimeout(() => {
         handleStartGame();
@@ -315,9 +325,18 @@ export default function Home() {
 
     function onGameEnd() {
       alert("상대방이 게임을 나갔습니다.\n게임을 종료합니다.");
-      setGameStart(false);
-      setGameOver(false);
+      setGameOver(true);
+      setDroptime(null);
+
       setStage(createStage());
+      setPlayType("single");
+      setReadyToStart(false);
+      setGameStart(false);
+      setScore(0);
+      setRows(0);
+      setLevel(1);
+      setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
+      setOtherPlayerStage(createStage());
       setSelectedPlayingGame(null);
     }
 
@@ -367,6 +386,8 @@ export default function Home() {
   const handleStartGame = () => {
     if (playType == "single") {
       socket.emit("startSingleGame");
+    } else if (playType.includes("multi")) {
+      socket.emit("startMultiGame");
     }
     if (gameArea.current) gameArea.current.focus();
     setStage(createStage());
@@ -475,7 +496,17 @@ export default function Home() {
                 <div>게임오버</div>
                 <div>
                   <div className="font-bold">내 게임 스코어</div>
+
                   <div className="text-sm">
+                    {isWin && playType?.includes("multi") && (
+                      <div className="text-lg text-blue-500 font-bold">
+                        승리
+                      </div>
+                    )}
+                    {!isWin && playType?.includes("multi") && (
+                      <div className="text-lg text-red-500 font-bold">패배</div>
+                    )}
+
                     <div>게임 스코어 : {score}</div>
                     <div>처리한 줄 갯수 : {rows}</div>
                     <div>달성한 레벨 : {level}</div>
@@ -484,6 +515,16 @@ export default function Home() {
                     <>
                       <div className="font-bold">상대방 게임 스코어</div>
                       <div className="text-sm">
+                        {!isWin && playType?.includes("multi") && (
+                          <div className="text-lg text-blue-500 font-bold">
+                            승리
+                          </div>
+                        )}
+                        {isWin && playType?.includes("multi") && (
+                          <div className="text-lg text-red-500 font-bold">
+                            패배
+                          </div>
+                        )}
                         <div>게임 스코어 : {otherPlayerScore.score}</div>
                         <div>처리한 줄 갯수 : {otherPlayerScore.rows}</div>
                         <div>달성한 레벨 : {otherPlayerScore.level}</div>
@@ -498,6 +539,8 @@ export default function Home() {
                     setGameOver(false);
                     setStage(createStage());
                     setPlayType("single");
+                    setReadyToStart(false);
+                    setIsWin(false);
                   }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
@@ -507,7 +550,7 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-5">
                 <div>닉네임 : {nickname}</div>
-                {playType != "multiGaming" && (
+                {!isReadyToStart && (
                   <form className="max-w-sm mx-auto">
                     <label
                       htmlFor="selectType"
@@ -574,31 +617,34 @@ export default function Home() {
                 )}
                 <div className="flex flex-col gap-y-2">
                   {" "}
-                  {!inComingInvite && playType == "multiFriend" && (
-                    <>
-                      <div>친구와 1:1 매치</div>
+                  {!inComingInvite &&
+                    playType == "multiFriend" &&
+                    !isReadyToStart && (
+                      <>
+                        <div>친구와 1:1 매치</div>
 
-                      <div className="text-sm">
-                        친구에게 참여코드{" "}
-                        <span
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              nickname.replace("Player_", "")
-                            );
-                            alert(
-                              "클립보드에 복사되었습니다, 친구에게 전달해주세요."
-                            );
-                          }}
-                          className="font-bold text-blue-500"
-                        >
-                          {nickname?.replace("Player_", "")}{" "}
-                        </span>
-                        를 전달하거나, 친구한테 받은 코드를 입력해주세요.
-                      </div>
-                    </>
-                  )}
+                        <div className="text-sm">
+                          친구에게 참여코드{" "}
+                          <span
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                nickname.replace("Player_", "")
+                              );
+                              alert(
+                                "클립보드에 복사되었습니다, 친구에게 전달해주세요."
+                              );
+                            }}
+                            className="font-bold text-blue-500"
+                          >
+                            {nickname?.replace("Player_", "")}{" "}
+                          </span>
+                          를 전달하거나, 친구한테 받은 코드를 입력해주세요.
+                        </div>
+                      </>
+                    )}
                   {!isSendInvite &&
                     !inComingInvite &&
+                    !isReadyToStart &&
                     playType == "multiFriend" && (
                       <div className="flex justify-between ">
                         <input

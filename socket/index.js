@@ -93,6 +93,9 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("startMultiGame", () => {
+    broadCastViewGameList();
+  });
   socket.on("startSingleGame", () => {
     const player = getPlayerBySocket(socket);
     if (player) {
@@ -118,7 +121,10 @@ io.on("connection", (socket) => {
       if (game) {
         game.end();
         gameList.delete(game.id);
-        io.to(game.id).emit("gameOver", { message: "게임이 종료되었습니다." });
+        io.to(game.id).emit("gameOver", {
+          message: "게임이 종료되었습니다.",
+          loser: player.nickname,
+        });
       }
     }
     broadCastViewGameList();
@@ -136,7 +142,6 @@ io.on("connection", (socket) => {
           score,
           level,
         });
-        console.log(game.getState());
         // console
         // 자기가 속한 게임 socket room에 업데이트된 게임 상태 전달
         // socket.to(game.id).emit("updateGameFromServer", {
@@ -291,7 +296,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log("disconnected", socket.id);
     // 속한 게임에 기권 처리
     // 게임 종료 처리
     // 게임 삭제 처리
