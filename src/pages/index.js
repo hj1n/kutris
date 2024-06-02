@@ -434,7 +434,6 @@ export default function Home() {
         socket.emit("gameOver");
         setGameOver(true);
         setDroptime(null);
-        setFriendNickname("");
       }
       updatePlayerPos({ x: 0, y: 0, collided: true });
     }
@@ -481,7 +480,7 @@ export default function Home() {
                     <div>처리한 줄 갯수 : {rows}</div>
                     <div>달성한 레벨 : {level}</div>
                   </div>
-                  {friendNickname != "" && (
+                  {playType?.includes("multi") && (
                     <>
                       <div className="font-bold">상대방 게임 스코어</div>
                       <div className="text-sm">
@@ -499,7 +498,6 @@ export default function Home() {
                     setGameOver(false);
                     setStage(createStage());
                     setPlayType("single");
-                    setFriendNickname("");
                   }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
@@ -551,6 +549,9 @@ export default function Home() {
                           ) {
                             socket.emit("waitFriend");
                             setMatchMsg("받은 매치 요청이 없습니다. ");
+                            setFriendNickname("");
+                            setIsSendInvite(false);
+                            setInComingInvite(null);
                           } else if (
                             playType == "multiFriend" &&
                             e.target.value != "multiFriend"
