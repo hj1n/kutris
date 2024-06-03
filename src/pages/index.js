@@ -270,11 +270,7 @@ export default function Home() {
         }
         setGameOver(true);
         setDroptime(null);
-        setScore(0);
-        setRows(0);
-        setLevel(1);
-        setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
-        setOtherPlayerStage(createStage());
+
         setSelectedPlayingGame(null);
       }
     }
@@ -539,6 +535,11 @@ export default function Home() {
                     setPlayType("single");
                     setReadyToStart(false);
                     setIsWin(false);
+                    setScore(0);
+                    setRows(0);
+                    setLevel(1);
+                    setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
+                    setOtherPlayerStage(createStage());
                   }}
                   className="cursor-pointer bg-gray-800 text-white p-2 rounded"
                 >
