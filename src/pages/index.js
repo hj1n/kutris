@@ -312,9 +312,6 @@ export default function Home() {
     function onReceiveAttack({ count }) {
       console.log("count", count);
       insertRandomRow(count);
-
-      // for (let i = 0; i < count; i++) {
-      // }
     }
 
     function onGameEnd() {
