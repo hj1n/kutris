@@ -176,6 +176,7 @@ export default function Home() {
   const [playType, setPlayType] = useState("single");
   const [inComingInvite, setInComingInvite] = useState("");
   const [isWin, setIsWin] = useState(false);
+  const [viewType, setViewType] = useState("single");
 
   useEffect(() => {
     // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
@@ -803,9 +804,11 @@ export default function Home() {
                           {playingGameList?.map((game) => (
                             <div
                               key={game.gameId}
-                              onClick={() =>
-                                setSelectedPlayingGame(game.gameId)
-                              }
+                              onClick={() => {
+                                setSelectedPlayingGame(game.gameId);
+                                // 멀티인경우 화면 2개 필요하기 때문
+                                setViewType(game.gameType);
+                              }}
                             >
                               <GameCard
                                 selectedPlayingGame={selectedPlayingGame}
@@ -890,7 +893,7 @@ export default function Home() {
             window.location.href = "/";
           }}
         >
-          KUTRIS
+          KUTRIS {playType?.includes("view") && " - 관전"}
         </span>
 
         <div className="flex">
@@ -901,15 +904,16 @@ export default function Home() {
             level={level}
             isConnected={isConnected}
           />
-          {!isMobileCheck && playType.includes("multi") && (
-            <GameBoard
-              stage={otherPlayerStage}
-              score={otherPlayerScore.score}
-              rows={otherPlayerScore.rows}
-              level={otherPlayerScore.level}
-              isConnected={isConnected}
-            />
-          )}
+          {!isMobileCheck &&
+            (playType.includes("multi") || viewType.includes("multi")) && (
+              <GameBoard
+                stage={otherPlayerStage}
+                score={otherPlayerScore.score}
+                rows={otherPlayerScore.rows}
+                level={otherPlayerScore.level}
+                isConnected={isConnected}
+              />
+            )}
         </div>
 
         {!playType.includes("view") && isMobileCheck && (
