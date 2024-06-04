@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createStage, isColliding, randomTetromino } from "@/utils/gameHelper";
 import { ROWPOINTS, STAGE_WIDTH } from "@/utils/gameSetup";
-import Cell from "@/components/Cell";
 import { socket } from "@/socket";
 import GameCard from "@/components/GameCard";
 import { v4 as uuidv4 } from "uuid";
@@ -13,6 +12,7 @@ import {
   isMobile,
 } from "react-device-detect";
 import GameBoard from "@/components/GameBoard";
+import Image from "next/image";
 const usePlayer = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
@@ -571,7 +571,13 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-5">
-                <div>닉네임 : {nickname}</div>
+                <Image src="/tetris.png" width={150} height={150} />
+                <div>
+                  닉네임 :{" "}
+                  <span className="bg-blue-100 text-blue-800 text-sm font-bold me-2 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+                    {nickname}
+                  </span>
+                </div>
 
                 {!isReadyToStart && (
                   <form className="max-w-sm mx-auto">
@@ -592,21 +598,35 @@ export default function Home() {
                           setPlayType("single");
                           return;
                         } else {
-                          if (
-                            !playType?.includes("view") &&
-                            e.target.value.includes("view")
-                          ) {
-                            setSelectedPlayingGame([]);
-                            socket.emit("viewGameWaitingJoin");
-                          } else if (
-                            playType?.includes("view") &&
-                            !e.target.value.includes("view")
-                          ) {
+                          if (playType == "view" && e.target.value != "view") {
                             setSelectedPlayingGame([]);
                             socket.emit("viewGameWaitingLeave");
-                          } else if (
-                            !playType.includes("multiFriend") &&
-                            e.target.value.includes("multiFriend")
+                          }
+
+                          if (
+                            playType == "multiFriend" &&
+                            e.target.value != "multiFriend"
+                          ) {
+                            socket.emit("waitFriendLeave");
+                            setMatchMsg(null);
+                          }
+
+                          if (
+                            playType == "multiRandom" &&
+                            e.target.value != "multiRandom"
+                          ) {
+                            socket.emit("waitRandomLeave");
+                            setMatchMsg(null);
+                          }
+
+                          if (playType != "view" && e.target.value == "view") {
+                            setSelectedPlayingGame([]);
+                            socket.emit("viewGameWaitingJoin");
+                          }
+
+                          if (
+                            playType != "multiFriend" &&
+                            e.target.value == "multiFriend"
                           ) {
                             socket.emit("waitFriend");
                             setMatchMsg("받은 매치 요청이 없습니다. ");
@@ -618,13 +638,30 @@ export default function Home() {
                                 "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
                               );
                             }
-                          } else if (
-                            playType.includes("multiFriend") &&
-                            !e.target.value.includes("multiFriend")
-                          ) {
-                            socket.emit("waitFriendLeave");
-                            setMatchMsg(null);
                           }
+
+                          if (
+                            playType != "multiRandom" &&
+                            e.target.value == "multiRandom"
+                          ) {
+                            setTimeout(() => {
+                              setMatchMsg(
+                                "랜덤 매치중인 플레이어를 찾고 있습니다."
+                              );
+                            }, 1500);
+                            setTimeout(() => {
+                              socket.emit("waitRandom");
+                            }, 3000);
+                            // setFriendNickname("");
+                            // setIsSendInvite(false);
+                            // setInComingInvite(null);
+                            if (isMobileCheck) {
+                              alert(
+                                "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
+                              );
+                            }
+                          }
+
                           setPlayType(e.target.value);
                         }
                       }}
@@ -640,6 +677,18 @@ export default function Home() {
                 )}
                 <div className="flex flex-col gap-y-2">
                   {" "}
+                  {playType?.includes("multiRandom") && (
+                    <>
+                      <div>랜덤 매치</div>
+
+                      <div className="text-sm">
+                        대기중인 다른 플레이어가 있을 때 게임이 시작됩니다.
+                      </div>
+                      <div className="text-sm">
+                        이 페이지를 벗어나면 매치 대기가 취소됩니다.
+                      </div>
+                    </>
+                  )}
                   {!inComingInvite &&
                     playType == "multiFriend" &&
                     !isReadyToStart && (

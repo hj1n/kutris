@@ -23,6 +23,14 @@ class Player {
   waitingFriendLeave() {
     this.state = "waiting";
   }
+
+  matchingRandom() {
+    this.state = "matchingRandom";
+  }
+
+  matchingRandomLeave() {
+    this.state = "waiting";
+  }
 }
 class Game {
   constructor(player1, player2 = null) {
@@ -43,7 +51,6 @@ class Game {
     this.state = "playing";
     this.players.forEach((player) => {
       player.isPlaying = true;
-      // player.currentGame = this;
     });
   }
 
@@ -73,7 +80,7 @@ server.listen(port, () => {
 
 const playerList = new Map();
 const gameList = new Map();
-const waitingPlayers = [];
+// const waitingPlayers = [];
 
 io.on("connection", (socket) => {
   socket.on("setNickname", ({ nickname }) => {
@@ -94,6 +101,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("startMultiGame", () => {
+    const player = getPlayerBySocket(socket);
+    if (player) {
+      const game = player.currentGame;
+      game.start();
+    }
     broadCastViewGameList();
   });
   socket.on("startSingleGame", () => {
@@ -132,25 +144,15 @@ io.on("connection", (socket) => {
   socket.on("updateGame", ({ stage, rows, score, level }) => {
     const player = getPlayerBySocket(socket);
     if (player) {
-      // 해당 플레이어가 참여중인 게임 obj확인
       const game = player.currentGame;
       if (game) {
-        // 게임의 플레이어별 상태 업데이트
         game.playerStage.set(player.nickname, {
           stage,
           rows,
           score,
           level,
         });
-        // console
-        // 자기가 속한 게임 socket room에 업데이트된 게임 상태 전달
-        // socket.to(game.id).emit("updateGameFromServer", {
-        //   nickname: player.nickname,
-        //   stage,
-        //   rows,
-        //   score,
-        //   level,
-        // });
+
         io.to(game.id).emit("updateGameFromServer", {
           game: game.getState(),
         });
@@ -172,21 +174,32 @@ io.on("connection", (socket) => {
       }
     }
   });
-  socket.on("joinRandomMatch", () => {
+  socket.on("waitRandom", () => {
     const player = getPlayerBySocket(socket);
     if (player && !player.isPlaying) {
-      waitingPlayers.push(player);
+      // 랜덤 매치 대기 상태로 변경
+      player.matchingRandom();
+
+      const waitingPlayers = Array.from(playerList.values()).filter(
+        (player) => player.state === "matchingRandom"
+      );
+
       if (waitingPlayers.length >= 2) {
-        const player1 = waitingPlayers.shift();
-        const player2 = waitingPlayers.shift();
+        const player1 = waitingPlayers[0];
+        const player2 = waitingPlayers[1];
+
+        player1.matchingRandomLeave();
+        player2.matchingRandomLeave();
+
         const game = new Game(player1, player2);
+
         gameList.set(game.id, game);
         player1.currentGame = game;
         player2.currentGame = game;
-        game.start();
+        // game.start();
         player1.socket.join(game.id);
         player2.socket.join(game.id);
-        io.to(game.id).emit("gameStart", {
+        io.to(game.id).emit("confirmInvite", {
           gameId: game.id,
           players: [
             { nickname: player1.nickname },
@@ -249,7 +262,7 @@ io.on("connection", (socket) => {
       gameList.set(game.id, game);
       player.currentGame = game;
       friend.currentGame = game;
-      game.start();
+      // game.start();
       player.socket.join(game.id);
       friend.socket.join(game.id);
       io.to(game.id).emit("confirmInvite", {
@@ -261,22 +274,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("viewGameWaitingJoin", () => {
-    // 관전 가능한 게임 목록 실시간 전달하기 위한 room join
     socket.join("viewGameWaiting");
-    // 현재 게임중인 목록 한번 전달 및 다른 함수에서 게임 추가시 실시간 전달
-    // const playingGames = [];
-    // gameList.forEach((game) => {
-    //   if (game.state === "playing") {
-    //     playingGames.push({
-    //       gameId: game.id,
-    //       players: game.players.map((player) => player.nickname),
-    //       gameType: game.gameType,
-    //     });
-    //   }
-    // });
-    // io.to("viewGameWaiting").emit("viewGameList", {
-    //   playingGameList: getGames(),
-    // });
+
     broadCastViewGameList();
   });
   socket.on("viewGameWaitingLeave", () => {
