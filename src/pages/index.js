@@ -177,6 +177,7 @@ export default function Home() {
   const [inComingInvite, setInComingInvite] = useState("");
   const [isWin, setIsWin] = useState(false);
   const [viewType, setViewType] = useState("single");
+  const [viewPlayers, setViewPlayers] = useState([]);
 
   useEffect(() => {
     // 페이지 로딩시 스테이지 초기화 및 플레이어 닉네임 생성
@@ -203,12 +204,17 @@ export default function Home() {
   useEffect(() => {
     // stage 업데이트시 서버에 전송
 
-    if (!socket.connected || !gameStart || !stage) {
+    if (
+      !socket.connected ||
+      !gameStart ||
+      !stage ||
+      playType?.includes("view")
+    ) {
       return;
     }
 
     socket.emit("updateGame", { stage, rows, score, level });
-  }, [stage]);
+  }, [stage, playType]);
 
   useEffect(() => {
     // 소켓 연결
@@ -239,21 +245,30 @@ export default function Home() {
       window.location.reload();
     }
     function onUpdateGameFromServer({ game }) {
-      // setStage(stage);
-      // setRows(rows);
-      // setScore(score);
-      // setLevel(level);
-      // playerStage is map with player nickname and stage
-      // playerScore is map with player nickname and score
-      // state is game state
-      // players is array of player nickname
-      // console.log("state", state);
-      game.playerStage.forEach(([player, { stage, rows, score, level }]) => {
-        if (player != nickname) {
-          setOtherPlayerStage(stage);
-          setOtherPlayerScore({ score, rows, level });
-        }
-      });
+      if (playType?.includes("view")) {
+        // 관전모드에서는, viewPlayers 에 따라서 상대방 정보 업데이트 반영
+        game.playerStage.forEach(([player, { stage, rows, score, level }]) => {
+          console.log(player);
+          console.log(viewPlayers);
+          if (player == viewPlayers[0]) {
+            setStage(stage);
+            setScore(score);
+            setRows(rows);
+            setLevel(level);
+          } else if (player == viewPlayers[1]) {
+            setOtherPlayerStage(stage);
+            setOtherPlayerScore({ score, rows, level });
+          }
+        });
+      } else {
+        // 자신이 플레이하는 게임일때는, 상대방 정보 업데이트 반영
+        game.playerStage.forEach(([player, { stage, rows, score, level }]) => {
+          if (player != nickname) {
+            setOtherPlayerStage(stage);
+            setOtherPlayerScore({ score, rows, level });
+          }
+        });
+      }
     }
 
     function onGameOver({ message, loser }) {
@@ -316,20 +331,29 @@ export default function Home() {
     }
 
     function onGameEnd() {
-      alert("상대방이 게임을 나갔습니다.\n게임을 종료합니다.");
-      setGameOver(true);
-      setDroptime(null);
+      if (playType?.includes("view")) {
+        // 관전자 입장에서의 게임오버
+        alert("플레이어중 한명이 게임을 종료하여 관전을 종료합니다.");
+        setGameStart(false);
+        setGameOver(false);
+        setStage(createStage());
+        setSelectedPlayingGame(null);
+      } else {
+        alert("상대방이 게임을 나갔습니다.\n게임을 종료합니다.");
+        setGameOver(true);
+        setDroptime(null);
 
-      setStage(createStage());
-      setPlayType("single");
-      setReadyToStart(false);
-      setGameStart(false);
-      setScore(0);
-      setRows(0);
-      setLevel(1);
-      setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
-      setOtherPlayerStage(createStage());
-      setSelectedPlayingGame(null);
+        setStage(createStage());
+        setPlayType("single");
+        setReadyToStart(false);
+        setGameStart(false);
+        setScore(0);
+        setRows(0);
+        setLevel(1);
+        setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
+        setOtherPlayerStage(createStage());
+        setSelectedPlayingGame(null);
+      }
     }
 
     socket.on("connect", onConnect);
@@ -361,7 +385,7 @@ export default function Home() {
       socket.off("confirmInvite", onConfirmInvite);
       socket.off("receiveAttack", onReceiveAttack);
     };
-  }, [playType, stage, score, rows, level]);
+  }, [playType, stage, score, rows, level, viewPlayers]);
 
   const movePlayer = (dir) => {
     if (!isColliding(player, stage, { x: dir, y: 0 })) {
@@ -475,6 +499,7 @@ export default function Home() {
   };
 
   useInterval(() => {
+    if (playType?.includes("view")) return;
     drop();
   }, dropTime);
 
@@ -580,25 +605,22 @@ export default function Home() {
                             setSelectedPlayingGame([]);
                             socket.emit("viewGameWaitingLeave");
                           } else if (
-                            e.target.value.includes("multi") &&
-                            isMobile
-                          ) {
-                            alert(
-                              "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
-                            );
-                            // return;
-                          } else if (
-                            playType != "multiFriend" &&
-                            e.target.value == "multiFriend"
+                            !playType.includes("multiFriend") &&
+                            e.target.value.includes("multiFriend")
                           ) {
                             socket.emit("waitFriend");
                             setMatchMsg("받은 매치 요청이 없습니다. ");
                             setFriendNickname("");
                             setIsSendInvite(false);
                             setInComingInvite(null);
+                            if (isMobileCheck) {
+                              alert(
+                                "모바일에서는 멀티플레이시 상대방플레이 화면을 볼 수 없습니다."
+                              );
+                            }
                           } else if (
-                            playType == "multiFriend" &&
-                            e.target.value != "multiFriend"
+                            playType.includes("multiFriend") &&
+                            !e.target.value.includes("multiFriend")
                           ) {
                             socket.emit("waitFriendLeave");
                             setMatchMsg(null);
@@ -773,7 +795,7 @@ export default function Home() {
 
                     {isMobileCheck && (
                       <div className="text-xs text-gray-500">
-                        모바일 환경에서는 싱글플레이만 관전이 가능합니다.{" "}
+                        모바일 환경에서는 싱글플레이만 목록에 표시됩니다.{" "}
                       </div>
                     )}
                     {playingGameList.length == 0 ? (
@@ -808,6 +830,8 @@ export default function Home() {
                                 setSelectedPlayingGame(game.gameId);
                                 // 멀티인경우 화면 2개 필요하기 때문
                                 setViewType(game.gameType);
+                                setViewPlayers(game.players);
+                                console.log(game.players);
                               }}
                             >
                               <GameCard
@@ -848,45 +872,6 @@ export default function Home() {
         id="tetrisWrapper"
         className="overflow-hidden outline-none flex items-center justify-center flex-col"
       >
-        {/* <div>
-          <div className="display h-1/6 justify-center items-center ">
-            <div className="flex gap-5">
-              <div>스코어 {score}</div>
-              <div>줄 {rows}</div>
-              <div>레벨 {level}</div>
-
-              {isConnected ? (
-                <span className="ml-5 inline-flex items-center bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                  <span className="w-2 h-2 me-1 bg-green-500 rounded-full"></span>
-                  Server ON
-                </span>
-              ) : (
-                <span className="inline-flex items-center bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
-                  <span className="w-2 h-2 me-1 bg-red-500 rounded-full"></span>
-                  Server OFF
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center h-4/6">
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: `repeat(12, 25px)`,
-                gridTemplateRows: `repeat(20, 25px)`,
-                gridGap: "1px",
-                border: "1px solid #777",
-                background: "#222",
-              }}
-            >
-              {stage.map((row, y) =>
-                row.map((cell, x) => <Cell key={x * 20 + y} type={cell[0]} />)
-              )}
-            </div>
-          </div>
-        </div> */}
-        {/* { stage, score, rows, level, isConnected } */}
         <span
           className="text-xl font-bold text-custom-red cursor-pointer underline"
           onClick={() => {
