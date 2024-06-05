@@ -1,6 +1,13 @@
 import React from "react";
 import Cell from "./Cell";
-export default function GameBoard({ stage, score, rows, level, isConnected }) {
+export default function GameBoard({
+  stage,
+  score,
+  rows,
+  level,
+  isConnected,
+  drop,
+}) {
   return (
     <div>
       <div className="display h-1/6 justify-center items-center my-2">
@@ -26,6 +33,9 @@ export default function GameBoard({ stage, score, rows, level, isConnected }) {
       <div className="flex items-center justify-center h-4/6">
         <div
           className="grid"
+          onClick={() => {
+            drop();
+          }}
           style={{
             gridTemplateColumns: `repeat(12, 25px)`,
             gridTemplateRows: `repeat(20, 25px)`,

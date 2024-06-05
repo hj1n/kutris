@@ -938,6 +938,7 @@ export default function Home() {
             rows={rows}
             level={level}
             isConnected={isConnected}
+            drop={drop}
           />
           {!isMobileCheck &&
             (playType.includes("multi") || viewType.includes("multi")) && (
