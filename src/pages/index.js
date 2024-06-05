@@ -340,19 +340,20 @@ export default function Home() {
         setSelectedPlayingGame(null);
       } else {
         alert("상대방이 게임을 나갔습니다.\n게임을 종료합니다.");
-        setGameOver(true);
-        setDroptime(null);
+        window.location.reload(); // 그냥 새로고침 처리
+        // setGameOver(true);
+        // setDroptime(null);
 
-        setStage(createStage());
-        setPlayType("single");
-        setReadyToStart(false);
-        setGameStart(false);
-        setScore(0);
-        setRows(0);
-        setLevel(1);
-        setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
-        setOtherPlayerStage(createStage());
-        setSelectedPlayingGame(null);
+        // setStage(createStage());
+        // setPlayType("single");
+        // setReadyToStart(false);
+        // setGameStart(false);
+        // setScore(0);
+        // setRows(0);
+        // setLevel(1);
+        // setOtherPlayerScore({ score: 0, rows: 0, level: 1 });
+        // setOtherPlayerStage(createStage());
+        // setSelectedPlayingGame(null);
       }
     }
 
