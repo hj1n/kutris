@@ -42,7 +42,7 @@ class Game {
       this.gameType = "single";
     }
     this.id = `${this.gameType}_${Math.random().toString(36).substring(2, 15)}`;
-    this.state = "waiting"; // "waiting", "playing", "finished"
+    this.state = "waiting";
     this.playerStage = new Map();
     this.playerScore = new Map();
   }
@@ -93,8 +93,6 @@ io.on("connection", (socket) => {
           message: "Nickname set successfully",
         });
       } else {
-        // 이미 사용중인 닉네임일 경우, 새 닉네임 설정하도록 함
-        // 플레이어 목록에 추가하지 않음
         socket.emit("error", {
           message: "닉네임이 다른사용자와 중복되어 재접속합니다.",
         });
@@ -120,9 +118,7 @@ io.on("connection", (socket) => {
     try {
       const player = getPlayerBySocket(socket);
       if (player) {
-        // 우리 목록에 있는 플레이어인지 확인후 새게임 생성
         const game = new Game(player);
-        // 플레이어가 1명이므로 바로 시작
         gameList.set(game.id, game);
         player.currentGame = game;
         game.start();
@@ -242,7 +238,6 @@ io.on("connection", (socket) => {
     try {
       const player = getPlayerBySocket(socket);
       if (player && !player.isPlaying) {
-        // 친구 초대 대기 상태로 변경
         player.waitingFriend();
       }
     } catch (e) {

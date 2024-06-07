@@ -459,6 +459,7 @@ export default function Home() {
   };
 
   const drop = () => {
+    if (playType?.includes("view")) return;
     if (rows > level * 10) {
       setLevel((prev) => prev + 1);
       setDroptime(1000 / level + 200);
