@@ -234,6 +234,18 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("waitRandomLeave", () => {
+    try {
+      const player = getPlayerBySocket(socket);
+      if (player && !player.isPlaying) {
+        // 랜덤 매치 대기 상태로 변경
+        player.matchingRandomLeave();
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  });
+
   socket.on("waitFriend", () => {
     try {
       const player = getPlayerBySocket(socket);
